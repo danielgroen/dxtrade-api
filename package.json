@@ -1,6 +1,6 @@
 {
   "name": "@danielgroen/dxtrade-api",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "DXTrade trading API client library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -36,5 +36,9 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielgroen/dxtrade-api.git"
+  }
 }

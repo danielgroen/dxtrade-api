@@ -13,6 +13,7 @@ import {
   getSymbolSuggestions,
   getSymbolInfo,
   submitOrder,
+  getTradeJournal,
 } from "@/domains";
 
 export class DxtradeClient {
@@ -76,6 +77,10 @@ export class DxtradeClient {
 
   public async getAccountMetrics(): Promise<Account.Metrics> {
     return getAccountMetrics(this._ctx);
+  }
+
+  public async getTradeJournal(params: { from: number; to: number }): Promise<any> {
+    return getTradeJournal(this._ctx, params);
   }
 
   public async getInstruments(params: Partial<Instrument.Info> = {}): Promise<Instrument.Info[]> {

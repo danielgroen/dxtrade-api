@@ -1,6 +1,6 @@
 {
   "name": "@danielgroen/dxtrade-api",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "DXtrade trading API client library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -24,6 +24,7 @@
     "=============== Examples ===============": "",
     "example:debug": "tsx examples/debug.ts",
     "example:account": "tsx examples/account-metrics.ts",
+    "example:trade-journal": "tsx examples/trade-journal.ts",
     "example:connect": "tsx examples/connect.ts",
     "example:order": "tsx examples/submit-order.ts",
     "example:assessments": "tsx examples/get-assessments.ts",

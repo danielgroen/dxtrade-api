@@ -1,7 +1,6 @@
 import WebSocket from "ws";
-import { endpoints, DxtradeError } from "@/constants";
-import { WS_MESSAGE } from "@/constants/enums";
-import { Cookies, parseWsData, shouldLog, debugLog } from "@/utils";
+import { WS_MESSAGE, endpoints, DxtradeError } from "@/constants";
+import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Account } from ".";
 
@@ -38,4 +37,34 @@ export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): P
       reject(new DxtradeError("ACCOUNT_METRICS_ERROR", `Account metrics error: ${error.message}`));
     });
   });
+}
+
+export async function getTradeJournal(ctx: ClientContext, params: { from: number; to: number }): Promise<any> {
+  ctx.ensureSession();
+
+  try {
+    const cookieStr = Cookies.serialize(ctx.cookies);
+
+    const response = await retryRequest(
+      {
+        method: "GET",
+        url: endpoints.tradeJournal(ctx.broker, params),
+        headers: { ...baseHeaders(), Cookie: cookieStr },
+      },
+      ctx.retries,
+    );
+
+    if (response.status === 200) {
+      const setCookies = response.headers["set-cookie"] ?? [];
+      const incoming = Cookies.parse(setCookies);
+      ctx.cookies = Cookies.merge(ctx.cookies, incoming);
+      return response.data;
+    } else {
+      ctx.throwError("TRADE_JOURNAL_ERROR", `Login failed: ${response.status}`);
+    }
+  } catch (error: unknown) {
+    if (error instanceof DxtradeError) throw error;
+    const message = error instanceof Error ? error.message : "Unknown error";
+    ctx.throwError("TRADE_JOURNAL_ERROR", `Trade journal error: ${message}`);
+  }
 }

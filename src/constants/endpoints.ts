@@ -19,4 +19,7 @@ export const endpoints = {
   assessments: (base: string) => `${base}/api/assessments`,
 
   websocket: (base: string) => `wss://${base.split("//")[1]}/client/connector` + websocketQuery,
+
+  tradeJournal: (base: string, params: { from: number; to: number }) =>
+    `${base}/api/tradejournal?from=${params.from}&to=${params.to}`,
 };

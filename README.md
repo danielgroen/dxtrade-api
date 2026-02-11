@@ -1,9 +1,9 @@
-# DXTrade API
+# DXtrade API
 
 <!-- create image from ./public/logo-dxtrade.svg -->
-[![DXTrade API](https://raw.githubusercontent.com/danielgroen/dxtrade-api/master/public/logo-dxtrade.svg)](https://demo.dx.trade/developers/#/)
+[![DXtrade API](https://raw.githubusercontent.com/danielgroen/dxtrade-api/master/public/logo-dxtrade.svg)](https://demo.dx.trade/developers/#/)
 
-TypeScript client library for the DXTrade trading API based upon Nodejs.
+TypeScript client library for the DXtrade trading API based upon Nodejs.
 
 ## Install
 
@@ -19,7 +19,7 @@ import { DxtradeClient, OrderType, OrderSide, BROKER } from "dxtrade-api";
 const client = new DxtradeClient({
   username: "your_username",
   password: "your_password",
-  broker: "lark",
+  broker: "larkfunding",
   accountId: "optional_account_id",
 });
 
@@ -43,9 +43,9 @@ console.log(`Order ${order.orderId}: ${order.status}`);
 
 | Option | Type | Required | Description |
 |---|---|---|---|
-| `username` | `string` | Yes | DXTrade account username |
-| `password` | `string` | Yes | DXTrade account password |
-| `broker` | `string` | Yes | Broker identifier (e.g. `"lark"`, `"eightcap"`) |
+| `username` | `string` | Yes | DXtrade account username |
+| `password` | `string` | Yes | DXtrade account password |
+| `broker` | `string` | Yes | Broker identifier (e.g. `"larkfunding"`, `"eightcap"`) |
 | `accountId` | `string` | No | Account ID to auto-switch after login |
 | `brokerUrls` | `Record<string, string>` | No | Custom broker URL mapping |
 | `retries` | `number` | No | Retry count for failed requests (default: 3) |
@@ -106,7 +106,7 @@ npm run example:order
 npm run example:assessments
 ```
 
-## DXTrade API Docs
+## DXtrade API Docs
 
 https://demo.dx.trade/developers/#/
 

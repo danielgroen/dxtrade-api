@@ -1,7 +1,7 @@
 {
   "name": "@danielgroen/dxtrade-api",
   "version": "1.0.7",
-  "description": "DXTrade trading API client library",
+  "description": "DXtrade trading API client library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -22,7 +22,9 @@
     "example:connect": "tsx examples/connect.ts",
     "example:order": "tsx examples/submit-order.ts",
     "example:assessments": "tsx examples/get-assessments.ts",
+    "example:assessments:btc": "tsx examples/get-assessments.ts BTCUSD",
     "example:symbol": "tsx examples/symbol-info.ts",
+    "test": "echo \"no test specified\";",
     "example:symbol:btc": "tsx examples/symbol-info.ts BTCUSD"
   },
   "dependencies": {

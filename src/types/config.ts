@@ -1,5 +1,4 @@
 import type { DxtradeError } from "@/constants/errors";
-import type { OrderResponse, OrderUpdate } from "./order";
 
 export interface DxtradeConfig {
   username: string;
@@ -8,7 +7,7 @@ export interface DxtradeConfig {
   accountId?: string;
   brokerUrls?: Record<string, string>;
   retries?: number;
-  debug?: boolean;
+  debug?: boolean | string;
   callbacks?: DxtradeCallbacks;
 }
 
@@ -16,7 +15,6 @@ export interface DxtradeCallbacks {
   onError?: (error: DxtradeError) => void;
   onLogin?: () => void;
   onAccountSwitch?: (accountId: string) => void;
-  onOrderPlaced?: (order: OrderResponse) => void;
-  onOrderUpdate?: (order: OrderUpdate) => void;
+  onOrderPlaced?: (order: Order.Response) => void;
+  onOrderUpdate?: (order: Order.Update) => void;
 }
-

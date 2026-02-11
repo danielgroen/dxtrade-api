@@ -6,12 +6,11 @@ const client = new DxtradeClient({
   password: process.env.DXTRADE_PASSWORD!,
   broker: process.env.DXTRADE_BROKER!,
   accountId: process.env.DXTRADE_ACCOUNT_ID,
-  debug: process.env.DXTRADE_DEBUG === "true",
+  debug: process.env.DXTRADE_DEBUG || false,
 });
 
 async function main() {
   await client.connect();
-  console.log("Connected");
 
   const suggestions = await client.getSymbolSuggestions("EURUSD");
   const symbol = suggestions[0];

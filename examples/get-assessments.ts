@@ -6,12 +6,11 @@ const client = new DxtradeClient({
   password: process.env.DXTRADE_PASSWORD!,
   broker: process.env.DXTRADE_BROKER!,
   accountId: process.env.DXTRADE_ACCOUNT_ID,
-  debug: process.env.DXTRADE_DEBUG === "true",
+  debug: process.env.DXTRADE_DEBUG || false,
 });
 
 async function main() {
   await client.connect();
-  console.log("Connected");
 
   const now = Date.now();
   const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;

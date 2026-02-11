@@ -6,7 +6,7 @@ const client = new DxtradeClient({
   password: process.env.DXTRADE_PASSWORD!,
   broker: process.env.DXTRADE_BROKER!,
   accountId: process.env.DXTRADE_ACCOUNT_ID,
-  debug: process.env.DXTRADE_DEBUG === "true",
+  debug: process.env.DXTRADE_DEBUG || false,
   callbacks: {
     onLogin: () => console.log("Logged in"),
     onAccountSwitch: (id: string) => console.log(`Switched to account ${id}`),

@@ -1,24 +1,27 @@
-export function parseCookies(setCookieHeaders: string[]): Record<string, string> {
-  const cookies: Record<string, string> = {};
+export class Cookies {
 
-  for (const cookie of setCookieHeaders) {
-    const [nameValue] = cookie.split(";");
-    const eqIndex = nameValue.indexOf("=");
-    if (eqIndex === -1) continue;
-    const name = nameValue.slice(0, eqIndex).trim();
-    const value = nameValue.slice(eqIndex + 1).trim();
-    cookies[name] = value;
+  static parse(setCookieHeaders: string[]): Record<string, string> {
+    const cookies: Record<string, string> = {};
+  
+    for (const cookie of setCookieHeaders) {
+      const [nameValue] = cookie.split(";");
+      const eqIndex = nameValue.indexOf("=");
+      if (eqIndex === -1) continue;
+      const name = nameValue.slice(0, eqIndex).trim();
+      const value = nameValue.slice(eqIndex + 1).trim();
+      cookies[name] = value;
+    }
+  
+    return cookies;
   }
-
-  return cookies;
-}
-
-export function serializeCookies(cookies: Record<string, string>): string {
-  return Object.entries(cookies)
-    .map(([key, value]) => `${key}=${value}`)
-    .join("; ");
-}
-
-export function mergeCookies(existing: Record<string, string>, incoming: Record<string, string>): Record<string, string> {
-  return { ...existing, ...incoming };
+  
+  static serialize(cookies: Record<string, string>): string {
+    return Object.entries(cookies)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("; ");
+  }
+  
+  static merge(existing: Record<string, string>, incoming: Record<string, string>): Record<string, string> {
+    return { ...existing, ...incoming };
+  }
 }

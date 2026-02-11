@@ -8,15 +8,14 @@ import {
   resolveBrokerUrl,
 } from "@/constants";
 import {
-  parseCookies,
-  serializeCookies,
-  mergeCookies,
+  Cookies,
   baseHeaders,
   authHeaders,
   cookieOnlyHeaders,
   retryRequest,
   waitForHandshake,
-  waitForOrderUpdate,
+  createOrderListener,
+  clearDebugLog,
 } from "@/utils";
 
 export class DxtradeClient {
@@ -26,7 +25,7 @@ export class DxtradeClient {
   private csrf: string | null = null;
   private baseUrl: string;
   private retries: number;
-  private debug: boolean;
+  private debug: boolean | string;
 
   constructor(config: DxtradeConfig) {
     this.config = config;
@@ -56,8 +55,8 @@ export class DxtradeClient {
 
       if (response.status === 200) {
         const setCookies = response.headers["set-cookie"] ?? [];
-        const incoming = parseCookies(setCookies);
-        this.cookies = mergeCookies(this.cookies, incoming);
+        const incoming = Cookies.parse(setCookies);
+        this.cookies = Cookies.merge(this.cookies, incoming);
         this.callbacks.onLogin?.();
       } else {
         this.throwError("LOGIN_FAILED", `Login failed: ${response.status}`);
@@ -71,7 +70,7 @@ export class DxtradeClient {
 
   async fetchCsrf(): Promise<void> {
     try {
-      const cookieStr = serializeCookies(this.cookies);
+      const cookieStr = Cookies.serialize(this.cookies);
       const response = await retryRequest(
         {
           method: "GET",
@@ -102,7 +101,7 @@ export class DxtradeClient {
         {
           method: "POST",
           url: endpoints.switchAccount(this.baseUrl, accountId),
-          headers: authHeaders(this.csrf!, serializeCookies(this.cookies)),
+          headers: authHeaders(this.csrf!, Cookies.serialize(this.cookies)),
         },
         this.retries,
       );
@@ -119,11 +118,11 @@ export class DxtradeClient {
 
   // ── Market Data ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-  async getSymbolSuggestions(text: string): Promise<SymbolSuggestion[]> {
+  async getSymbolSuggestions(text: string): Promise<Market.Suggestion[]> {
     this.ensureSession();
 
     try {
-      const cookieStr = serializeCookies(this.cookies);
+      const cookieStr = Cookies.serialize(this.cookies);
       const response = await retryRequest(
         {
           method: "GET",
@@ -137,7 +136,7 @@ export class DxtradeClient {
       if (!suggests?.length) {
         this.throwError("NO_SUGGESTIONS", "No symbol suggestions found");
       }
-      return suggests as SymbolSuggestion[];
+      return suggests as Market.Suggestion[];
     } catch (error: unknown) {
       if (error instanceof DxtradeError) throw error;
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -148,12 +147,12 @@ export class DxtradeClient {
     }
   }
 
-  async getSymbolInfo(symbol: string): Promise<SymbolInfo> {
+  async getSymbolInfo(symbol: string): Promise<Market.Info> {
     this.ensureSession();
 
     try {
       const offsetMinutes = Math.abs(new Date().getTimezoneOffset());
-      const cookieStr = serializeCookies(this.cookies);
+      const cookieStr = Cookies.serialize(this.cookies);
       const response = await retryRequest(
         {
           method: "GET",
@@ -166,7 +165,7 @@ export class DxtradeClient {
       if (!response.data) {
         this.throwError("NO_SYMBOL_INFO", "No symbol info returned");
       }
-      return response.data as SymbolInfo;
+      return response.data as Market.Info;
     } catch (error: unknown) {
       if (error instanceof DxtradeError) throw error;
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -179,7 +178,7 @@ export class DxtradeClient {
 
   // ── Trading ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-  async submitOrder(params: SubmitOrderParams): Promise<OrderUpdate> {
+  async submitOrder(params: Order.SubmitParams): Promise<Order.Update> {
     this.ensureSession();
 
     const {
@@ -187,13 +186,20 @@ export class DxtradeClient {
       side,
       quantity,
       orderType,
+      orderCode,
       price,
       instrumentId,
       stopLoss,
       takeProfit,
       positionEffect = ACTION.OPENING,
+      positionCode,
+      tif = "GTC",
+      expireDate,
+      metadata,
     } = params;
-    const qty = side === SIDE.BUY ? Math.abs(quantity) : -Math.abs(quantity);
+    const info = await this.getSymbolInfo(symbol);
+    const units = Math.round(quantity * info.lotSize);
+    const qty = side === SIDE.BUY ? units : -units;
     const priceParam =
       orderType === ORDER_TYPE.STOP ? "stopPrice" : "limitPrice";
 
@@ -202,6 +208,7 @@ export class DxtradeClient {
       legs: [
         {
           ...(instrumentId != null && { instrumentId }),
+          ...(positionCode != null && { positionCode }),
           positionEffect,
           ratioQuantity: 1,
           symbol,
@@ -210,8 +217,10 @@ export class DxtradeClient {
       orderSide: side,
       orderType,
       quantity: qty,
-      requestId: `gwt-uid-931-${crypto.randomUUID()}`,
-      timeInForce: "GTC",
+      requestId: orderCode ?? `gwt-uid-931-${crypto.randomUUID()}`,
+      timeInForce: tif,
+      ...(expireDate != null && { expireDate }),
+      ...(metadata != null && { metadata }),
     };
 
     if (price != null && orderType !== ORDER_TYPE.MARKET) {
@@ -245,36 +254,25 @@ export class DxtradeClient {
     }
 
     try {
+      // Open WS listener BEFORE submitting so we don't miss the response
+      const wsUrl = endpoints.websocket(this.baseUrl);
+      const cookieStr = Cookies.serialize(this.cookies);
+      const listener = createOrderListener(wsUrl, cookieStr, 30_000, this.debug);
+      await listener.ready;
+
       const response = await retryRequest(
         {
           method: "POST",
           url: endpoints.submitOrder(this.baseUrl),
           data: orderData,
-          headers: authHeaders(this.csrf!, serializeCookies(this.cookies)),
+          headers: authHeaders(this.csrf!, Cookies.serialize(this.cookies)),
         },
         this.retries,
       );
 
-      if (response.status !== 200) {
-        this.throwError(
-          "ORDER_SUBMIT_FAILED",
-          `Order submission failed with status: ${response.status}`,
-        );
-      }
+      this.callbacks.onOrderPlaced?.(response.data as Order.Response);
 
-      this.callbacks.onOrderPlaced?.({
-        status: response.status,
-        data: response.data,
-      });
-
-      const wsUrl = endpoints.websocket(this.baseUrl);
-      const cookieStr = serializeCookies(this.cookies);
-      const orderUpdate = await waitForOrderUpdate(
-        wsUrl,
-        cookieStr,
-        30_000,
-        this.debug,
-      );
+      const orderUpdate = await listener.promise;
 
       this.callbacks.onOrderUpdate?.(orderUpdate);
       return orderUpdate;
@@ -291,8 +289,8 @@ export class DxtradeClient {
   // ── Analytics ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
   async getAssessments(
-    params: AssessmentsParams,
-  ): Promise<AssessmentsResponse> {
+    params: Assessments.Params,
+  ): Promise<Assessments.Response> {
     this.ensureSession();
 
     try {
@@ -306,12 +304,12 @@ export class DxtradeClient {
             subtype: params.subtype ?? null,
             to: params.to,
           },
-          headers: authHeaders(this.csrf!, serializeCookies(this.cookies)),
+          headers: authHeaders(this.csrf!, Cookies.serialize(this.cookies)),
         },
         this.retries,
       );
 
-      return response.data as AssessmentsResponse;
+      return response.data as Assessments.Response;
     } catch (error: unknown) {
       if (error instanceof DxtradeError) throw error;
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -327,16 +325,17 @@ export class DxtradeClient {
   async connect(): Promise<void> {
     await this.login();
     await this.fetchCsrf();
+    if (this.debug) clearDebugLog();
 
     const wsUrl = endpoints.websocket(this.baseUrl);
-    const cookieStr = serializeCookies(this.cookies);
+    const cookieStr = Cookies.serialize(this.cookies);
     await waitForHandshake(wsUrl, cookieStr, 30_000, this.debug);
 
     if (this.config.accountId) {
       await this.switchAccount(this.config.accountId);
       await waitForHandshake(
         endpoints.websocket(this.baseUrl),
-        serializeCookies(this.cookies),
+        Cookies.serialize(this.cookies),
         30_000,
         this.debug,
       );

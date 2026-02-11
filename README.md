@@ -1,5 +1,7 @@
-# dxtrade-api
+# DXTrade API Library
 
+<!-- create image from ./public/logo-dxtrade.svg -->
+[![DXTrade API](https://raw.githubusercontent.com/danielgroen/dxtrade-api/master/public/logo-dxtrade.svg)](https://demo.dx.trade/developers/#/)
 
 TypeScript client library for the DXTrade trading API.
 

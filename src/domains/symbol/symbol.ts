@@ -1,5 +1,7 @@
+import WebSocket from "ws";
 import { endpoints, DxtradeError } from "@/constants";
-import { Cookies, baseHeaders, retryRequest } from "@/utils";
+import { WS_MESSAGE } from "@/constants/enums";
+import { Cookies, baseHeaders, retryRequest, parseWsData, shouldLog, debugLog } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Symbol } from ".";
 
@@ -53,4 +55,49 @@ export async function getSymbolInfo(ctx: ClientContext, symbol: string): Promise
     const message = error instanceof Error ? error.message : "Unknown error";
     ctx.throwError("SYMBOL_INFO_ERROR", `Error getting symbol info: ${message}`);
   }
+}
+
+export async function getSymbolLimits(ctx: ClientContext, timeout = 30_000): Promise<Symbol.Limits[]> {
+  ctx.ensureSession();
+
+  const wsUrl = endpoints.websocket(ctx.baseUrl);
+  const cookieStr = Cookies.serialize(ctx.cookies);
+
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
+
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new DxtradeError("LIMITS_TIMEOUT", "Symbol limits request timed out"));
+    }, timeout);
+
+    let limits: Symbol.Limits[] = [];
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+    ws.on("message", (data) => {
+      const msg = parseWsData(data);
+      if (shouldLog(msg, ctx.debug)) debugLog(msg);
+
+      if (typeof msg === "string") return;
+      if (msg.type === WS_MESSAGE.LIMITS) {
+        const batch = msg.body as Symbol.Limits[];
+        if (batch.length === 0) return;
+
+        limits.push(...batch);
+
+        if (settleTimer) clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          clearTimeout(timer);
+          ws.close();
+          resolve(limits);
+        }, 0);
+      }
+    });
+
+    ws.on("error", (error) => {
+      clearTimeout(timer);
+      ws.close();
+      reject(new DxtradeError("LIMITS_ERROR", `Symbol limits error: ${error.message}`));
+    });
+  });
 }

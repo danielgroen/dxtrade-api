@@ -1,15 +1,18 @@
 import { resolveBrokerUrl, DxtradeError } from "@/constants";
 import type { ClientContext, DxtradeConfig } from "./client.types";
-import type { Assessments, Order, Symbol } from "./domains";
+import type { Account, Assessments, Instrument, Order, Symbol } from "./domains";
 import {
   login,
   fetchCsrf,
   switchAccount,
   connect,
+  getAccountMetrics,
+  getAssessments,
+  getInstruments,
+  getSymbolLimits,
   getSymbolSuggestions,
   getSymbolInfo,
   submitOrder,
-  getAssessments,
 } from "@/domains";
 
 export class DxtradeClient {
@@ -63,8 +66,20 @@ export class DxtradeClient {
     return getSymbolInfo(this._ctx, symbol);
   }
 
+  public async getSymbolLimits(): Promise<Symbol.Limits[]> {
+    return getSymbolLimits(this._ctx);
+  }
+
   public async submitOrder(params: Order.SubmitParams): Promise<Order.Update> {
     return submitOrder(this._ctx, params);
+  }
+
+  public async getAccountMetrics(): Promise<Account.Metrics> {
+    return getAccountMetrics(this._ctx);
+  }
+
+  public async getInstruments(params: Partial<Instrument.Info> = {}): Promise<Instrument.Info[]> {
+    return getInstruments(this._ctx, params);
   }
 
   public async getAssessments(params: Assessments.Params): Promise<Assessments.Response> {

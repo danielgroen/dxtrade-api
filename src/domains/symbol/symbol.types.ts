@@ -12,4 +12,17 @@ export namespace Symbol {
     lotSize: number;
     [key: string]: unknown;
   }
+
+  export interface Limits {
+    symbol: string;
+    instrumentId: number;
+    limitStopDistanceType: string;
+    limitStopDistance: number;
+    limitStopDistanceInPercentOfSpread: number;
+    minOrderSize: number;
+    minOrderSizeBypass: boolean;
+    maxOrderSize: number;
+    minOrderIncrement: number;
+    limitType: string;
+  }
 }

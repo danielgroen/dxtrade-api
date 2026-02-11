@@ -13,7 +13,7 @@ export async function getSymbolSuggestions(ctx: ClientContext, text: string): Pr
     const response = await retryRequest(
       {
         method: "GET",
-        url: endpoints.suggest(ctx.baseUrl, text),
+        url: endpoints.suggest(ctx.broker, text),
         headers: { ...baseHeaders(), Cookie: cookieStr },
       },
       ctx.retries,
@@ -40,7 +40,7 @@ export async function getSymbolInfo(ctx: ClientContext, symbol: string): Promise
     const response = await retryRequest(
       {
         method: "GET",
-        url: endpoints.instrumentInfo(ctx.baseUrl, symbol, offsetMinutes),
+        url: endpoints.instrumentInfo(ctx.broker, symbol, offsetMinutes),
         headers: { ...baseHeaders(), Cookie: cookieStr },
       },
       ctx.retries,
@@ -60,7 +60,7 @@ export async function getSymbolInfo(ctx: ClientContext, symbol: string): Promise
 export async function getSymbolLimits(ctx: ClientContext, timeout = 30_000): Promise<Symbol.Limits[]> {
   ctx.ensureSession();
 
-  const wsUrl = endpoints.websocket(ctx.baseUrl);
+  const wsUrl = endpoints.websocket(ctx.broker);
   const cookieStr = Cookies.serialize(ctx.cookies);
 
   return new Promise((resolve, reject) => {

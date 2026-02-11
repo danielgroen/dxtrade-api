@@ -167,7 +167,7 @@ export async function submitOrder(ctx: ClientContext, params: Order.SubmitParams
 
   try {
     // Open WS listener BEFORE submitting so we don't miss the response
-    const wsUrl = endpoints.websocket(ctx.baseUrl);
+    const wsUrl = endpoints.websocket(ctx.broker);
     const cookieStr = Cookies.serialize(ctx.cookies);
     const listener = createOrderListener(wsUrl, cookieStr, 30_000, ctx.debug);
     await listener.ready;
@@ -175,7 +175,7 @@ export async function submitOrder(ctx: ClientContext, params: Order.SubmitParams
     const response = await retryRequest(
       {
         method: "POST",
-        url: endpoints.submitOrder(ctx.baseUrl),
+        url: endpoints.submitOrder(ctx.broker),
         data: orderData,
         headers: authHeaders(ctx.csrf!, Cookies.serialize(ctx.cookies)),
       },

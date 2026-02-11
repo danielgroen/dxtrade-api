@@ -10,7 +10,7 @@ export async function getAssessments(ctx: ClientContext, params: Assessments.Par
     const response = await retryRequest(
       {
         method: "POST",
-        url: endpoints.assessments(ctx.baseUrl),
+        url: endpoints.assessments(ctx.broker),
         data: {
           from: params.from,
           instrument: params.instrument,

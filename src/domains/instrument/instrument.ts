@@ -12,7 +12,7 @@ export async function getInstruments(
 ): Promise<Instrument.Info[]> {
   ctx.ensureSession();
 
-  const wsUrl = endpoints.websocket(ctx.baseUrl);
+  const wsUrl = endpoints.websocket(ctx.broker);
   const cookieStr = Cookies.serialize(ctx.cookies);
 
   return new Promise((resolve, reject) => {

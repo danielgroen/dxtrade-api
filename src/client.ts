@@ -1,4 +1,4 @@
-import { resolveBrokerUrl, DxtradeError } from "@/constants";
+import { DxtradeError } from "@/constants";
 import type { ClientContext, DxtradeConfig } from "./client.types";
 import type { Account, Assessments, Instrument, Order, Symbol } from "./domains";
 import {
@@ -26,7 +26,7 @@ export class DxtradeClient {
       callbacks,
       cookies: {},
       csrf: null,
-      baseUrl: resolveBrokerUrl(config.broker, config.brokerUrls),
+      broker: config.broker,
       retries: config.retries ?? 3,
       debug: config.debug ?? false,
       ensureSession() {

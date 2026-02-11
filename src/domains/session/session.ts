@@ -52,7 +52,7 @@ export async function login(ctx: ClientContext): Promise<void> {
     const response = await retryRequest(
       {
         method: "POST",
-        url: endpoints.login(ctx.baseUrl),
+        url: endpoints.login(ctx.broker),
         data: {
           username: ctx.config.username,
           password: ctx.config.password,
@@ -84,8 +84,8 @@ export async function fetchCsrf(ctx: ClientContext): Promise<void> {
     const response = await retryRequest(
       {
         method: "GET",
-        url: ctx.baseUrl,
-        headers: { ...cookieOnlyHeaders(cookieStr), Referer: ctx.baseUrl },
+        url: ctx.broker,
+        headers: { ...cookieOnlyHeaders(cookieStr), Referer: ctx.broker },
       },
       ctx.retries,
     );
@@ -110,7 +110,7 @@ export async function switchAccount(ctx: ClientContext, accountId: string): Prom
     await retryRequest(
       {
         method: "POST",
-        url: endpoints.switchAccount(ctx.baseUrl, accountId),
+        url: endpoints.switchAccount(ctx.broker, accountId),
         headers: authHeaders(ctx.csrf!, Cookies.serialize(ctx.cookies)),
       },
       ctx.retries,
@@ -128,12 +128,12 @@ export async function connect(ctx: ClientContext): Promise<void> {
   await fetchCsrf(ctx);
   if (ctx.debug) clearDebugLog();
 
-  const wsUrl = endpoints.websocket(ctx.baseUrl);
+  const wsUrl = endpoints.websocket(ctx.broker);
   const cookieStr = Cookies.serialize(ctx.cookies);
   await waitForHandshake(wsUrl, cookieStr, 30_000, ctx.debug);
 
   if (ctx.config.accountId) {
     await switchAccount(ctx, ctx.config.accountId);
-    await waitForHandshake(endpoints.websocket(ctx.baseUrl), Cookies.serialize(ctx.cookies), 30_000, ctx.debug);
+    await waitForHandshake(endpoints.websocket(ctx.broker), Cookies.serialize(ctx.cookies), 30_000, ctx.debug);
   }
 }

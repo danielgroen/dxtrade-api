@@ -8,7 +8,7 @@ import type { Account } from ".";
 export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): Promise<Account.Metrics> {
   ctx.ensureSession();
 
-  const wsUrl = endpoints.websocket(ctx.baseUrl);
+  const wsUrl = endpoints.websocket(ctx.broker);
   const cookieStr = Cookies.serialize(ctx.cookies);
 
   return new Promise((resolve, reject) => {

@@ -1,10 +1,10 @@
-import type { DxtradeError } from "@/constants/errors";
-import type { Order } from "@/domains/order/order.types";
+import type { DxtradeError, BROKER } from "@/constants";
+import type { Order } from "@/domains/order";
 
 export interface DxtradeConfig {
   username: string;
   password: string;
-  broker: string;
+  broker: keyof typeof BROKER;
   accountId?: string;
   brokerUrls?: Record<string, string>;
   retries?: number;
@@ -25,7 +25,7 @@ export interface ClientContext {
   callbacks: DxtradeCallbacks;
   cookies: Record<string, string>;
   csrf: string | null;
-  baseUrl: string;
+  broker: keyof typeof BROKER;
   retries: number;
   debug: boolean | string;
   ensureSession(): void;

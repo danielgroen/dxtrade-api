@@ -58,6 +58,7 @@ import { BROKER } from "dxtrade-api";
 
 BROKER.LARK      // "https://trade.gooeytrade.com"
 BROKER.EIGHTCAP  // "https://trader.dx-eightcap.com"
+BROKER.FTMO      // "https://trade.dx-ftmo.com"
 ```
 
 ## API

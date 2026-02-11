@@ -1,10 +1,10 @@
 import "dotenv/config";
-import { DxtradeClient } from "../src";
+import { DxtradeClient, BROKER } from "../src";
 
 const client = new DxtradeClient({
   username: process.env.DXTRADE_USERNAME!,
   password: process.env.DXTRADE_PASSWORD!,
-  broker: process.env.DXTRADE_BROKER!,
+  broker: process.env.DXTRADE_BROKER! || BROKER.FTMO,
   accountId: process.env.DXTRADE_ACCOUNT_ID,
   debug: true,
 });

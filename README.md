@@ -14,12 +14,12 @@ npm install dxtrade-api
 ## Quick Start
 
 ```ts
-import { DxtradeClient, OrderType, OrderSide, BROKER } from "dxtrade-api";
+import { DxtradeClient, ORDER_TYPE, SIDE, BROKER } from "dxtrade-api";
 
 const client = new DxtradeClient({
   username: "your_username",
   password: "your_password",
-  broker: "larkfunding",
+  broker: "LARKFUNDING",
   accountId: "optional_account_id",
 });
 
@@ -30,9 +30,9 @@ const symbol = suggestions[0];
 
 const order = await client.submitOrder({
   symbol: symbol.name,
-  side: OrderSide.BUY,
+  side: SIDE.BUY,
   quantity: 0.01,
-  orderType: OrderType.MARKET,
+  orderType: ORDER_TYPE.MARKET,
   instrumentId: symbol.id,
 });
 
@@ -45,10 +45,11 @@ console.log(`Order ${order.orderId}: ${order.status}`);
 |---|---|---|---|
 | `username` | `string` | Yes | DXtrade account username |
 | `password` | `string` | Yes | DXtrade account password |
-| `broker` | `string` | Yes | Broker identifier (e.g. `"larkfunding"`, `"eightcap"`) |
+| `broker` | `string` | Yes | Broker identifier (e.g. `"LARKFUNDING"`, `"EIGHTCAP"`) |
 | `accountId` | `string` | No | Account ID to auto-switch after login |
 | `brokerUrls` | `Record<string, string>` | No | Custom broker URL mapping |
 | `retries` | `number` | No | Retry count for failed requests (default: 3) |
+| `debug` | `boolean \| string` | No | Enable debug logging (`true` for all, or a WS message type to filter) |
 | `callbacks` | `DxtradeCallbacks` | No | Event callbacks |
 
 ## Built-in Brokers
@@ -56,9 +57,9 @@ console.log(`Order ${order.orderId}: ${order.status}`);
 ```ts
 import { BROKER } from "dxtrade-api";
 
-BROKER.LARK      // "https://trade.gooeytrade.com"
-BROKER.EIGHTCAP  // "https://trader.dx-eightcap.com"
-BROKER.FTMO      // "https://trade.dx-ftmo.com"
+BROKER.LARKFUNDING  // "https://trade.gooeytrade.com"
+BROKER.EIGHTCAP     // "https://trader.dx-eightcap.com"
+BROKER.FTMO         // "https://dxtrade.ftmo.com"
 ```
 
 ## API
@@ -74,14 +75,32 @@ BROKER.FTMO      // "https://trade.dx-ftmo.com"
 
 - `client.getSymbolSuggestions(text)` — Search for symbols
 - `client.getSymbolInfo(symbol)` — Get instrument info (volume limits, lot size)
+- `client.getSymbolLimits()` — Get order size limits and stop/limit distances for all symbols
+- `client.getInstruments(params?)` — Get all available instruments, optionally filtered by partial match (e.g. `{ type: "FOREX" }`)
 
 ### Trading
 
 - `client.submitOrder(params)` — Submit an order and wait for WebSocket confirmation
 
+### Account
+
+- `client.getAccountMetrics()` — Get account metrics (equity, balance, margin, open P&L, etc.)
+- `client.getTradeJournal({ from, to })` — Fetch trade journal entries for a date range (Unix timestamps)
+
 ### Analytics
 
 - `client.getAssessments(params)` — Fetch PnL assessments for a date range
+
+## Enums
+
+```ts
+import { ORDER_TYPE, SIDE, ACTION, TIF } from "dxtrade-api";
+
+ORDER_TYPE.MARKET | ORDER_TYPE.LIMIT | ORDER_TYPE.STOP
+SIDE.BUY | SIDE.SELL
+ACTION.OPENING | ACTION.CLOSING
+TIF.GTC | TIF.DAY | TIF.GTD
+```
 
 ## Callbacks
 
@@ -105,6 +124,13 @@ cp .env.example .env  # fill in credentials
 npm run example:connect
 npm run example:order
 npm run example:assessments
+npm run example:account
+npm run example:instruments
+npm run example:instruments:forex
+npm run example:symbol
+npm run example:symbol:btc
+npm run example:trade-journal
+npm run example:debug
 ```
 
 ## DXtrade API Docs

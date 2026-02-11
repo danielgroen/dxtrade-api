@@ -1,0 +1,40 @@
+{
+  "name": "dxtrade-api",
+  "version": "1.0.0",
+  "description": "DXTrade trading API client library",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "gen:globals": "tsx scripts/generate-globals.ts",
+    "build": "npm run gen:globals && tsup",
+    "dev": "npm run gen:globals && tsup --watch",
+    "example:connect": "tsx examples/connect.ts",
+    "example:order": "tsx examples/submit-order.ts",
+    "example:assessments": "tsx examples/get-assessments.ts",
+    "example:symbol": "tsx examples/symbol-info.ts",
+    "example:symbol:btc": "tsx examples/symbol-info.ts BTCUSD"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.14",
+    "dotenv": "^16.4.7",
+    "tsup": "^8.3.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "license": "MIT"
+}

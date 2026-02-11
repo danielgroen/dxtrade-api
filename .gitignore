@@ -1,0 +1,6 @@
+.env
+node_modules
+dist
+.DS_Store
+old
+src/global.d.ts

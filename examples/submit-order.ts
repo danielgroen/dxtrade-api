@@ -9,7 +9,7 @@ const client = new DxtradeClient({
   debug: process.env.DXTRADE_DEBUG || false,
 });
 
-async function main() {
+(async () => {
   await client.connect();
 
   const suggestions = await client.getSymbolSuggestions("EURUSD");
@@ -28,6 +28,4 @@ async function main() {
   });
 
   console.log(`Order filled: ${order.orderId} — status: ${order.status}`);
-}
-
-main().catch(console.error);
+})().catch(console.error);

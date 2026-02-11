@@ -1,8 +1,7 @@
 export class Cookies {
-
   static parse(setCookieHeaders: string[]): Record<string, string> {
     const cookies: Record<string, string> = {};
-  
+
     for (const cookie of setCookieHeaders) {
       const [nameValue] = cookie.split(";");
       const eqIndex = nameValue.indexOf("=");
@@ -11,16 +10,16 @@ export class Cookies {
       const value = nameValue.slice(eqIndex + 1).trim();
       cookies[name] = value;
     }
-  
+
     return cookies;
   }
-  
+
   static serialize(cookies: Record<string, string>): string {
     return Object.entries(cookies)
       .map(([key, value]) => `${key}=${value}`)
       .join("; ");
   }
-  
+
   static merge(existing: Record<string, string>, incoming: Record<string, string>): Record<string, string> {
     return { ...existing, ...incoming };
   }

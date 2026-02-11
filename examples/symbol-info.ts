@@ -9,7 +9,7 @@ const client = new DxtradeClient({
   debug: process.env.DXTRADE_DEBUG || false,
 });
 
-async function main() {
+(async () => {
   await client.connect();
   console.log("Connected");
 
@@ -21,6 +21,4 @@ async function main() {
   console.log("suggestions", suggestions);
   console.log("info", info);
   console.log("symbol", symbol);
-}
-
-main().catch(console.error);
+})().catch(console.error);

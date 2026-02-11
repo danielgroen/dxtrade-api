@@ -17,6 +17,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "examples", "src/types/global.d.ts"],
+  "include": ["src", "examples"],
   "exclude": ["node_modules", "dist", "old"]
 }

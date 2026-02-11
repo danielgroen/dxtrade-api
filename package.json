@@ -16,16 +16,23 @@
     "dist"
   ],
   "scripts": {
-    "gen:globals": "tsx scripts/generate-globals.ts",
-    "build": "npm run gen:globals && tsup",
-    "dev": "npm run gen:globals && tsup --watch",
+    "================ Build ===============": "",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "================ Tests ================": "",
+    "test": "echo \"no test specified\";",
+    "=============== Examples ===============": "",
     "example:connect": "tsx examples/connect.ts",
     "example:order": "tsx examples/submit-order.ts",
     "example:assessments": "tsx examples/get-assessments.ts",
     "example:assessments:btc": "tsx examples/get-assessments.ts BTCUSD",
     "example:symbol": "tsx examples/symbol-info.ts",
-    "test": "echo \"no test specified\";",
-    "example:symbol:btc": "tsx examples/symbol-info.ts BTCUSD"
+    "example:symbol:btc": "tsx examples/symbol-info.ts BTCUSD",
+    "========== Linting & Formatting ==========": "",
+    "lint": "eslint \"src/**/*.ts\" \"examples/**/*.ts\"",
+    "lint:fix": "eslint --fix \"src/**/*.ts\" \"examples/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"examples/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"examples/**/*.ts\""
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -33,7 +40,12 @@
   },
   "devDependencies": {
     "@types/ws": "^8.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
     "dotenv": "^16.4.7",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
     "tsup": "^8.3.6",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"

@@ -14,9 +14,7 @@ const client = new DxtradeClient({
   },
 });
 
-async function main() {
+(async () => {
   await client.connect();
   console.log("Connected successfully");
-}
-
-main().catch(console.error);
+})().catch(console.error);

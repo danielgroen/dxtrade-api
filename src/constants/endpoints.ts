@@ -1,3 +1,9 @@
+const websocketQuery =
+  `?X-Atmosphere-tracking-id=0&X-Atmosphere-Framework=2.3.2-javascript` +
+  `&X-Atmosphere-Transport=websocket&X-Atmosphere-TrackMessageSize=true` +
+  `&Content-Type=text/x-gwt-rpc;%20charset=UTF-8&X-atmo-protocol=true` +
+  `&sessionState=dx-new&guest-mode=false`;
+
 export const endpoints = {
   login: (base: string) => `${base}/api/auth/login`,
 
@@ -12,10 +18,5 @@ export const endpoints = {
 
   assessments: (base: string) => `${base}/api/assessments`,
 
-  websocket: (base: string) =>
-    `wss://${base.split("//")[1]}/client/connector`
-    + `?X-Atmosphere-tracking-id=0&X-Atmosphere-Framework=2.3.2-javascript`
-    + `&X-Atmosphere-Transport=websocket&X-Atmosphere-TrackMessageSize=true`
-    + `&Content-Type=text/x-gwt-rpc;%20charset=UTF-8&X-atmo-protocol=true`
-    + `&sessionState=dx-new&guest-mode=false`,
+  websocket: (base: string) => `wss://${base.split("//")[1]}/client/connector` + websocketQuery,
 };

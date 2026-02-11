@@ -9,7 +9,7 @@ const client = new DxtradeClient({
   debug: process.env.DXTRADE_DEBUG || false,
 });
 
-async function main() {
+(async () => {
   await client.connect();
 
   const now = Date.now();
@@ -22,6 +22,4 @@ async function main() {
   });
 
   console.log("Assessments:", assessments);
-}
-
-main().catch(console.error);
+})().catch(console.error);

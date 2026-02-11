@@ -1,4 +1,4 @@
-export namespace Market {
+export namespace Symbol {
   export interface Suggestion {
     id: number;
     name: string;

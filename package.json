@@ -1,6 +1,6 @@
 {
   "name": "@danielgroen/dxtrade-api",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "DXTrade trading API client library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

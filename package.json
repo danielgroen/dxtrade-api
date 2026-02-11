@@ -1,6 +1,6 @@
 {
   "name": "@danielgroen/dxtrade-api",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "DXtrade trading API client library",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,6 +26,8 @@
     "example:account": "tsx examples/account-metrics.ts",
     "example:trade-journal": "tsx examples/trade-journal.ts",
     "example:connect": "tsx examples/connect.ts",
+    "example:positions": "tsx examples/positions.ts",
+    "example:close-position": "tsx examples/close-position.ts",
     "example:order": "tsx examples/submit-order.ts",
     "example:assessments": "tsx examples/get-assessments.ts",
     "example:assessments:btc": "tsx examples/get-assessments.ts BTCUSD",

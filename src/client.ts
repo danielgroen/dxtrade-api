@@ -1,12 +1,14 @@
 import { DxtradeError } from "@/constants";
 import type { ClientContext, DxtradeConfig } from "./client.types";
-import type { Account, Assessments, Instrument, Order, Symbol } from "./domains";
+import type { Account, Assessments, Instrument, Order, Position, Symbol } from "./domains";
 import {
   login,
   fetchCsrf,
   switchAccount,
   connect,
   getAccountMetrics,
+  getPositions,
+  closePosition,
   getAssessments,
   getInstruments,
   getSymbolLimits,
@@ -77,6 +79,14 @@ export class DxtradeClient {
 
   public async getAccountMetrics(): Promise<Account.Metrics> {
     return getAccountMetrics(this._ctx);
+  }
+
+  public async getPositions(): Promise<Position.Get[]> {
+    return getPositions(this._ctx);
+  }
+
+  public async closePosition(position: Position.Close): Promise<void> {
+    return closePosition(this._ctx, position);
   }
 
   public async getTradeJournal(params: { from: number; to: number }): Promise<any> {

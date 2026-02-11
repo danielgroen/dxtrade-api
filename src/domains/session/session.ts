@@ -32,7 +32,7 @@ function waitForHandshake(
       if (shouldLog(msg, debug)) debugLog(msg);
 
       if (typeof msg === "string") return;
-      if (msg.type === WS_MESSAGE.POSITIONS) {
+      if (msg.accountId) {
         clearTimeout(timer);
         ws.close();
         resolve();

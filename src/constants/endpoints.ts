@@ -16,6 +16,8 @@ export const endpoints = {
 
   submitOrder: (base: string) => `${base}/api/orders/single`,
 
+  closePosition: (base: string) => `${base}/api/positions/close`,
+
   assessments: (base: string) => `${base}/api/assessments`,
 
   websocket: (base: string) => `wss://${base.split("//")[1]}/client/connector` + websocketQuery,

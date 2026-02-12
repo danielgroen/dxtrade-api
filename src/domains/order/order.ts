@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import WebSocket from "ws";
-import { endpoints, ORDER_TYPE, SIDE, ACTION, DxtradeError } from "@/constants";
+import { endpoints, ORDER_TYPE, SIDE, ACTION, DxtradeError, ERROR } from "@/constants";
 import { WS_MESSAGE } from "@/constants/enums";
 import { Cookies, authHeaders, retryRequest, parseWsData, shouldLog, debugLog } from "@/utils";
 import type { ClientContext } from "@/client.types";
@@ -167,7 +167,7 @@ export async function submitOrder(ctx: ClientContext, params: Order.SubmitParams
 
   try {
     // Open WS listener BEFORE submitting so we don't miss the response
-    const wsUrl = endpoints.websocket(ctx.broker);
+    const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
     const cookieStr = Cookies.serialize(ctx.cookies);
     const listener = createOrderListener(wsUrl, cookieStr, 30_000, ctx.debug);
     await listener.ready;
@@ -192,6 +192,6 @@ export async function submitOrder(ctx: ClientContext, params: Order.SubmitParams
     if (error instanceof DxtradeError) throw error;
     const message =
       error instanceof Error ? ((error as any).response?.data?.message ?? error.message) : "Unknown error";
-    ctx.throwError("ORDER_ERROR", `Error submitting order: ${message}`);
+    ctx.throwError(ERROR.ORDER_ERROR, `Error submitting order: ${message}`);
   }
 }

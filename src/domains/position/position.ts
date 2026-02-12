@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import { WS_MESSAGE, endpoints, DxtradeError } from "@/constants";
+import { WS_MESSAGE, ERROR, endpoints, DxtradeError } from "@/constants";
 import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Position } from ".";
@@ -7,7 +7,7 @@ import type { Position } from ".";
 export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> {
   ctx.ensureSession();
 
-  const wsUrl = endpoints.websocket(ctx.broker);
+  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);
 
   return new Promise((resolve, reject) => {
@@ -15,7 +15,7 @@ export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> 
 
     const timer = setTimeout(() => {
       ws.close();
-      reject(new DxtradeError("ACCOUNT_POSITIONS_TIMEOUT", "Account positions timed out"));
+      reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_TIMEOUT, "Account positions timed out"));
     }, 30_000);
 
     ws.on("message", (data) => {
@@ -33,7 +33,7 @@ export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> 
     ws.on("error", (error) => {
       clearTimeout(timer);
       ws.close();
-      reject(new DxtradeError("ACCOUNT_POSITIONS_ERROR", `Account positions error: ${error.message}`));
+      reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_ERROR, `Account positions error: ${error.message}`));
     });
   });
 }
@@ -54,6 +54,6 @@ export async function closePosition(ctx: ClientContext, data: Position.Close): P
     if (error instanceof DxtradeError) throw error;
     const message =
       error instanceof Error ? ((error as any).response?.data?.message ?? error.message) : "Unknown error";
-    ctx.throwError("POSITION_CLOSE_ERROR", `Position close error: ${message}`);
+    ctx.throwError(ERROR.POSITION_CLOSE_ERROR, `Position close error: ${message}`);
   }
 }

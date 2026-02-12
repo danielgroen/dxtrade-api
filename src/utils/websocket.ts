@@ -22,6 +22,15 @@ export function clearDebugLog(): void {
   writeFileSync(DEBUG_LOG, "");
 }
 
+export function parseAtmosphereId(data: WebSocket.Data): string | null {
+  const raw = data.toString();
+  const parts = raw.split("|");
+  if (parts.length >= 2 && /^[0-9a-f-]{36}$/.test(parts[1])) {
+    return parts[1];
+  }
+  return null;
+}
+
 export function parseWsData(data: WebSocket.Data): WsPayload | string {
   const raw = data.toString();
   const pipeIndex = raw.indexOf("|");

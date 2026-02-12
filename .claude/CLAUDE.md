@@ -80,6 +80,18 @@ const client = new DxtradeClient({
 })().catch(console.error);
 ```
 
+## Debugging
+
+When `DXTRADE_DEBUG=true` (or any truthy value) is set in `.env`, all WebSocket messages are logged to `debug.log` in the project root. Use this file to inspect raw WS payloads when troubleshooting features that rely on WebSocket data (orders, positions, OHLC, etc.).
+
+## WebSocket / Atmosphere
+
+DXtrade uses the Atmosphere framework for WebSocket communication. Each WS connection receives a server-assigned tracking ID (UUID) in its first message (format: `"length|tracking-id|0||"`). This ID identifies the Atmosphere session.
+
+**Critical**: All WebSocket connections MUST reuse the same Atmosphere tracking ID (stored as `ctx.atmosphereId`). Opening a new WS with `X-Atmosphere-tracking-id=0` creates a **separate** Atmosphere session. When the server sends data (e.g. chart bars, order updates), it routes to ONE Atmosphere session — if multiple sessions exist, data may go to the wrong (closed) one. This caused intermittent failures where OHLC data was routed to the handshake WS instead of the listener WS.
+
+The fix: `connect()` captures the tracking ID from the handshake and stores it in `ctx.atmosphereId`. All subsequent WS connections pass it via `endpoints.websocket(ctx.broker, ctx.atmosphereId)` so the server reuses the same session.
+
 ## Rules
 
 ### When adding or removing a feature:
@@ -89,6 +101,12 @@ const client = new DxtradeClient({
 4. Add an example script in `examples/` if the feature is user-facing
 5. Add a corresponding npm script in package.json
 6. Add or update tests in `tests/`
+
+### Constants and enums:
+- **Error codes**: Always use the `ERROR` enum from `@/constants` — never use raw strings for error codes (e.g. `ERROR.OHLC_TIMEOUT`, not `"OHLC_TIMEOUT"`)
+- **WebSocket message types**: Always use the `WS_MESSAGE` enum — never use raw strings (e.g. `WS_MESSAGE.POSITIONS`, not `"POSITIONS"`)
+- **WebSocket subtopics**: Use `WS_MESSAGE.SUBTOPIC` namespace (e.g. `WS_MESSAGE.SUBTOPIC.BIG_CHART_COMPONENT`)
+- When adding a new error code, WebSocket message type, or subtopic, add it to `src/constants/enums.ts`
 
 ### General:
 - Do not commit with `git commit` directly — use `npm run commit`

@@ -33,6 +33,9 @@ await client.connect();
 - client.getSymbolInfo(symbol: string) — Get instrument info (volume limits, lot size), returns Symbol.Info
 - client.getSymbolLimits() — Get order size limits for all symbols, returns Symbol.Limits[]
 - client.getInstruments(params?: Partial<Instrument.Info>) — Get all instruments, optionally filtered (e.g. { type: "FOREX" })
+- client.getOHLC(params: OHLC.Params) — Fetch OHLC price bars for a symbol, returns OHLC.Bar[]
+  Required params: symbol (string)
+  Optional params: resolution (seconds, default 300), range (seconds, default 345600), maxBars (default 3500), priceField ("bid" | "ask", default "bid")
 
 ### Trading
 - client.submitOrder(params: Order.SubmitParams) — Submit order and wait for WebSocket confirmation, returns Order.Update

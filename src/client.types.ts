@@ -25,6 +25,7 @@ export interface ClientContext {
   callbacks: DxtradeCallbacks;
   cookies: Record<string, string>;
   csrf: string | null;
+  atmosphereId: string | null;
   broker: keyof typeof BROKER;
   retries: number;
   debug: boolean | string;

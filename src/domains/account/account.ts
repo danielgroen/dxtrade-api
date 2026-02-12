@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import { WS_MESSAGE, endpoints, DxtradeError } from "@/constants";
+import { WS_MESSAGE, ERROR, endpoints, DxtradeError } from "@/constants";
 import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Account } from ".";
@@ -7,7 +7,7 @@ import type { Account } from ".";
 export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): Promise<Account.Metrics> {
   ctx.ensureSession();
 
-  const wsUrl = endpoints.websocket(ctx.broker);
+  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);
 
   return new Promise((resolve, reject) => {
@@ -15,7 +15,7 @@ export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): P
 
     const timer = setTimeout(() => {
       ws.close();
-      reject(new DxtradeError("ACCOUNT_METRICS_TIMEOUT", "Account metrics timed out"));
+      reject(new DxtradeError(ERROR.ACCOUNT_METRICS_TIMEOUT, "Account metrics timed out"));
     }, timeout);
 
     ws.on("message", (data) => {
@@ -34,7 +34,7 @@ export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): P
     ws.on("error", (error) => {
       clearTimeout(timer);
       ws.close();
-      reject(new DxtradeError("ACCOUNT_METRICS_ERROR", `Account metrics error: ${error.message}`));
+      reject(new DxtradeError(ERROR.ACCOUNT_METRICS_ERROR, `Account metrics error: ${error.message}`));
     });
   });
 }
@@ -60,11 +60,11 @@ export async function getTradeJournal(ctx: ClientContext, params: { from: number
       ctx.cookies = Cookies.merge(ctx.cookies, incoming);
       return response.data;
     } else {
-      ctx.throwError("TRADE_JOURNAL_ERROR", `Login failed: ${response.status}`);
+      ctx.throwError(ERROR.TRADE_JOURNAL_ERROR, `Login failed: ${response.status}`);
     }
   } catch (error: unknown) {
     if (error instanceof DxtradeError) throw error;
     const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError("TRADE_JOURNAL_ERROR", `Trade journal error: ${message}`);
+    ctx.throwError(ERROR.TRADE_JOURNAL_ERROR, `Trade journal error: ${message}`);
   }
 }

@@ -24,6 +24,7 @@ npm install dxtrade-api
 - [x] Positions (get & close)
 - [x] Account metrics & trade journal
 - [x] Symbol search & instrument info
+- [x] OHLC / price bar data
 - [x] PnL assessments
 - [x] Multi-broker support (FTMO, Eightcap, Lark Funding)
 - [x] Full TypeScript support
@@ -99,6 +100,7 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 - `client.getSymbolInfo(symbol)` — Get instrument info (volume limits, lot size)
 - `client.getSymbolLimits()` — Get order size limits and stop/limit distances for all symbols
 - `client.getInstruments(params?)` — Get all available instruments, optionally filtered by partial match (e.g. `{ type: "FOREX" }`)
+- `client.getOHLC(params)` — Fetch OHLC price bars for a symbol (resolution, range, maxBars, priceField)
 
 ### Trading
 
@@ -156,6 +158,7 @@ npm run example:assessments
 npm run example:assessments:btc
 npm run example:account
 npm run example:instruments
+npm run example:ohlc
 npm run example:instruments:forex
 npm run example:symbol
 npm run example:symbol:btc

@@ -1,6 +1,5 @@
 import WebSocket from "ws";
 import { endpoints, DxtradeError } from "@/constants";
-import { WS_MESSAGE } from "@/constants/enums";
 import {
   Cookies,
   authHeaders,

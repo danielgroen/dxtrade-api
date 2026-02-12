@@ -1,6 +1,7 @@
 # DXtrade API
 
-[![npm version](https://img.shields.io/npm/v/@danielgroen/dxtrade-api)](https://www.npmjs.com/package/@danielgroen/dxtrade-api)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![npm downloads](https://img.shields.io/npm/dm/@danielgroen/dxtrade-api)](https://www.npmjs.com/package/@danielgroen/dxtrade-api)
 [![license](https://img.shields.io/npm/l/@danielgroen/dxtrade-api)](LICENSE)
 [![Tests](https://github.com/danielgroen/dxtrade-api/actions/workflows/tests.yml/badge.svg)](https://github.com/danielgroen/dxtrade-api/actions/workflows/tests.yml)
@@ -8,7 +9,7 @@
 
 [![DXtrade API](https://raw.githubusercontent.com/danielgroen/dxtrade-api/master/public/logo-dxtrade.svg)](https://demo.dx.trade/developers/#/)
 
-Unofficial TypeScript client for the DXtrade trading API. Connect, trade, and manage positions on any broker that supports DXtrade.
+Unofficial Node.js client for the DXtrade trading API with full TypeScript support. Connect, trade, and manage positions on any broker that supports DXtrade.
 
 ## Install
 
@@ -25,6 +26,7 @@ npm install dxtrade-api
 - [x] Symbol search & instrument info
 - [x] PnL assessments
 - [x] Multi-broker support (FTMO, Eightcap, Lark Funding)
+- [x] Full TypeScript support
 - [ ] Batch orders
 - [ ] Close whole position helper
 - [ ] Modify existing orders

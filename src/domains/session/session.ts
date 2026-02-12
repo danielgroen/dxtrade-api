@@ -66,7 +66,7 @@ export async function login(ctx: ClientContext): Promise<void> {
         data: {
           username: ctx.config.username,
           password: ctx.config.password,
-          domain: ctx.config.broker,
+          vendor: ctx.config.broker,
         },
         headers: { "Content-Type": "application/json" },
       },

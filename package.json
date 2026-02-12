@@ -28,7 +28,6 @@
     "example:positions:get": "tsx examples/positions.get.ts",
     "example:positions:close": "tsx examples/positions.close.ts",
     "example:positions:close-all": "tsx examples/positions.close-all.ts",
-    "example:positions:metrics": "tsx examples/positions.metrics.ts",
     "example:positions:stream": "tsx examples/positions.stream.ts",
     "example:orders:submit": "tsx examples/orders.submit.ts",
     "example:account:metrics": "tsx examples/account.metrics.ts",

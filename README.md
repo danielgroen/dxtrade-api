@@ -113,11 +113,10 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 
 ### Positions
 
-- `client.positions.get()` — Get all open positions
+- `client.positions.get()` — Get all open positions with P&L metrics merged (margin, plOpen, marketValue, etc.)
 - `client.positions.close(params)` — Close a position (supports partial closes via the quantity field)
 - `client.positions.closeAll()` — Close all open positions with market orders
-- `client.positions.metrics()` — Get position-level P&L metrics
-- `client.positions.stream(callback)` — Stream real-time position updates (requires `connect()`). Returns an unsubscribe function.
+- `client.positions.stream(callback)` — Stream real-time position updates with live P&L (requires `connect()`). Returns an unsubscribe function.
 
 ### Orders
 

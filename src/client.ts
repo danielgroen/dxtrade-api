@@ -11,7 +11,6 @@ import {
   getAccountMetrics,
   getTradeHistory,
   getPositions,
-  getPositionMetrics,
   closePosition,
   closeAllPositions,
   streamPositions,
@@ -31,8 +30,8 @@ import {
 class PositionsDomain {
   constructor(private _ctx: ClientContext) {}
 
-  /** Get all open positions via WebSocket. */
-  get(): Promise<Position.Get[]> {
+  /** Get all open positions with P&L metrics merged. */
+  get(): Promise<Position.Full[]> {
     return getPositions(this._ctx);
   }
 
@@ -46,13 +45,8 @@ class PositionsDomain {
     return closeAllPositions(this._ctx);
   }
 
-  /** Get position-level P&L metrics via WebSocket. */
-  metrics(): Promise<Position.Metrics[]> {
-    return getPositionMetrics(this._ctx);
-  }
-
-  /** Stream real-time position updates. Requires connect(). Returns unsubscribe function. */
-  stream(callback: (positions: Position.Get[]) => void): () => void {
+  /** Stream real-time position updates with P&L metrics. Requires connect(). Returns unsubscribe function. */
+  stream(callback: (positions: Position.Full[]) => void): () => void {
     return streamPositions(this._ctx, callback);
   }
 }

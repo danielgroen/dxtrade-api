@@ -32,11 +32,10 @@ await client.connect(); // auth + persistent WebSocket (recommended)
 - client.switchAccount(accountId: string) — Switch to a specific trading account
 
 ### Positions
-- client.positions.get() — Get all open positions, returns Position.Get[]
+- client.positions.get() — Get all open positions with P&L metrics merged (margin, plOpen, marketValue, etc.), returns Position.Full[]
 - client.positions.close(params: Position.Close) — Close a position (supports partial closes via the quantity field)
 - client.positions.closeAll() — Close all open positions with market orders
-- client.positions.metrics() — Get position-level P&L metrics, returns Position.Metrics[]
-- client.positions.stream(callback: (positions: Position.Get[]) => void) — Stream real-time position updates, requires connect(). Returns unsubscribe function.
+- client.positions.stream(callback: (positions: Position.Full[]) => void) — Stream real-time position updates with live P&L (requires connect()). Returns unsubscribe function.
 
 ### Orders
 - client.orders.get() — Get all pending/open orders, returns Order.Get[]

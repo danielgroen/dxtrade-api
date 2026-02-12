@@ -1,6 +1,10 @@
 # DXtrade API
 
-<!-- create image from ./public/logo-dxtrade.svg -->
+[![npm version](https://img.shields.io/npm/v/@danielgroen/dxtrade-api)](https://www.npmjs.com/package/@danielgroen/dxtrade-api)
+[![npm downloads](https://img.shields.io/npm/dm/@danielgroen/dxtrade-api)](https://www.npmjs.com/package/@danielgroen/dxtrade-api)
+[![license](https://img.shields.io/npm/l/@danielgroen/dxtrade-api)](LICENSE)
+[![Publish to npm](https://github.com/danielgroen/dxtrade-api/actions/workflows/publish.yml/badge.svg)](https://github.com/danielgroen/dxtrade-api/actions/workflows/publish.yml)
+
 [![DXtrade API](https://raw.githubusercontent.com/danielgroen/dxtrade-api/master/public/logo-dxtrade.svg)](https://demo.dx.trade/developers/#/)
 
 TypeScript client library for the DXtrade trading API based upon Nodejs.

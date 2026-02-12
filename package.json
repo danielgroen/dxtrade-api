@@ -57,6 +57,21 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
+  "keywords": [
+    "dxtrade",
+    "dxtrade-api",
+    "trading",
+    "trading-api",
+    "prop-trading",
+    "prop-firm",
+    "ftmo",
+    "eightcap",
+    "forex",
+    "cfd",
+    "websocket",
+    "typescript",
+    "nodejs"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -92,5 +92,6 @@ export enum WS_MESSAGE {
 export namespace WS_MESSAGE {
   export enum SUBTOPIC {
     BIG_CHART_COMPONENT = "BigChartComponentPresenter-4",
+    OHLC_STREAM = "OHLCStreamPresenter-0",
   }
 }

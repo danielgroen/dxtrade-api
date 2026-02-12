@@ -19,6 +19,7 @@ import {
   getSymbolLimits,
   getSymbolSuggestions,
   getOHLC,
+  streamOHLC,
   getSymbolInfo,
   getOrders,
   cancelOrder,
@@ -147,6 +148,11 @@ class OhlcDomain {
   get(params: OHLC.Params): Promise<OHLC.Bar[]> {
     return getOHLC(this._ctx, params);
   }
+
+  /** Stream real-time OHLC bar updates. Requires connect(). Returns unsubscribe function. */
+  stream(params: OHLC.Params, callback: (bars: OHLC.Bar[]) => void): Promise<() => void> {
+    return streamOHLC(this._ctx, params, callback);
+  }
 }
 
 class AssessmentsDomain {
@@ -187,7 +193,7 @@ export class DxtradeClient {
   public readonly symbols: SymbolsDomain;
   /** Instrument operations: get (with optional filtering). */
   public readonly instruments: InstrumentsDomain;
-  /** OHLC price bar operations: get. */
+  /** OHLC price bar operations: get, stream. */
   public readonly ohlc: OhlcDomain;
   /** PnL assessment operations: get. */
   public readonly assessments: AssessmentsDomain;

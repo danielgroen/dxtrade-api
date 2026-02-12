@@ -38,6 +38,8 @@
     "example:instruments:get": "tsx examples/instruments.get.ts",
     "example:instruments:get:forex": "tsx examples/instruments.get.ts FOREX",
     "example:ohlc:get": "tsx examples/ohlc.get.ts",
+    "example:ohlc:stream": "tsx examples/ohlc.stream.ts",
+    "example:ohlc:stream:btc": "tsx examples/ohlc.stream.ts BTCUSD",
     "example:assessments:get": "tsx examples/assessments.get.ts",
     "example:assessments:get:btc": "tsx examples/assessments.get.ts BTCUSD",
     "============= Git =============": "",

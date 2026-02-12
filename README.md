@@ -26,7 +26,7 @@ npm install dxtrade-api
 - [x] Position metrics (per-position P&L)
 - [x] Account metrics, trade journal & trade history
 - [x] Symbol search & instrument info
-- [x] OHLC / price bar data
+- [x] OHLC / price bar data (one-shot & streaming)
 - [x] PnL assessments
 - [x] Multi-broker support (FTMO, Eightcap, Lark Funding)
 - [x] Persistent WebSocket with `connect()`
@@ -34,7 +34,7 @@ npm install dxtrade-api
 - [x] Full TypeScript support
 - [ ] Batch orders
 - [ ] Modify existing orders
-- [ ] Real-time price streaming
+- [x] Real-time OHLC streaming
 
 ## Quick Start
 
@@ -48,8 +48,8 @@ const client = new DxtradeClient({
   accountId: "optional_account_id",
 });
 
-// connect() = auth + persistent WebSocket (recommended)
-await client.connect();
+// await client.auth(); // Auth only
+await client.connect(); // Auth + persistent WebSocket (recommended)
 
 const suggestions = await client.symbols.search("EURUSD");
 const symbol = suggestions[0];
@@ -63,17 +63,17 @@ const order = await client.orders.submit({
 });
 
 console.log(`Order ${order.orderId}: ${order.status}`);
-client.disconnect();
+client.disconnect(); // disconnect stream -- only needed if client.connect()
 ```
 
 ## Connection Modes
 
 ```ts
-// Persistent WebSocket (recommended) — reuses one WS for all data, enables streaming
+// 1. Persistent WebSocket (recommended) — reuses one WS for all data, enables streaming
 await client.connect();
 client.disconnect(); // when done
 
-// Lightweight — auth only, each data call opens a temporary WebSocket
+// 2. Lightweight — auth only, each data call opens a temporary WebSocket
 await client.auth();
 ```
 
@@ -144,6 +144,7 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 ### OHLC
 
 - `client.ohlc.get(params)` — Fetch OHLC price bars for a symbol (resolution, range, maxBars, priceField)
+- `client.ohlc.stream(params, callback)` — Stream real-time OHLC bar updates (requires `connect()`). Returns a promise that resolves with an unsubscribe function after the snapshot is received.
 
 ### Assessments
 
@@ -195,6 +196,8 @@ npm run example:symbols:info:btc
 npm run example:instruments:get
 npm run example:instruments:get:forex
 npm run example:ohlc:get
+npm run example:ohlc:stream
+npm run example:ohlc:stream:btc
 npm run example:assessments:get
 npm run example:assessments:get:btc
 ```

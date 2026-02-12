@@ -62,6 +62,7 @@ await client.connect(); // auth + persistent WebSocket (recommended)
 - client.ohlc.get(params: OHLC.Params) — Fetch OHLC price bars for a symbol, returns OHLC.Bar[]
   Required params: symbol (string)
   Optional params: resolution (seconds, default 300), range (seconds, default 345600), maxBars (default 3500), priceField ("bid" | "ask", default "bid")
+- client.ohlc.stream(params: OHLC.Params, callback: (bars: OHLC.Bar[]) => void) — Stream real-time OHLC bar updates (requires connect()). Returns Promise<() => void>. Callback receives snapshot bars first, then live updates.
 
 ### Assessments
 - client.assessments.get(params: Assessments.Params) — Fetch PnL assessments for a date range

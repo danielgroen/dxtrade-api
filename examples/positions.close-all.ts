@@ -10,8 +10,12 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
-  const positions = await client.getPositions();
+  await client.auth();
 
-  console.log("Positions: ", positions);
+  const positions = await client.positions.get();
+  console.log(`Closing ${positions.length} position(s)...`);
+
+  await client.positions.closeAll();
+
+  console.log("All positions closed");
 })().catch(console.error);

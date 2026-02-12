@@ -14,6 +14,7 @@ export function createMockContext(overrides: Partial<ClientContext> = {}): Clien
     csrf: "csrf-token",
     accountId: "ACC-123",
     atmosphereId: "atm-id-123",
+    wsManager: null,
     broker: "https://dxtrade.ftmo.com",
     retries: 1,
     debug: false,

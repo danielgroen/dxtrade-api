@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { endpoints, DxtradeError, ERROR } from "@/constants";
 import {
   Cookies,
+  WsManager,
   authHeaders,
   cookieOnlyHeaders,
   retryRequest,
@@ -140,7 +141,7 @@ export async function switchAccount(ctx: ClientContext, accountId: string): Prom
   }
 }
 
-export async function connect(ctx: ClientContext): Promise<void> {
+export async function auth(ctx: ClientContext): Promise<void> {
   await login(ctx);
   await fetchCsrf(ctx);
   if (ctx.debug) clearDebugLog();
@@ -160,5 +161,22 @@ export async function connect(ctx: ClientContext): Promise<void> {
     );
     ctx.atmosphereId = reconnect.atmosphereId;
     ctx.accountId = reconnect.accountId;
+  }
+}
+
+export async function connect(ctx: ClientContext): Promise<void> {
+  await auth(ctx);
+
+  const wsManager = new WsManager();
+  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
+  const cookieStr = Cookies.serialize(ctx.cookies);
+  await wsManager.connect(wsUrl, cookieStr, ctx.debug);
+  ctx.wsManager = wsManager;
+}
+
+export function disconnect(ctx: ClientContext): void {
+  if (ctx.wsManager) {
+    ctx.wsManager.close();
+    ctx.wsManager = null;
   }
 }

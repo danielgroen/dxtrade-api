@@ -1,5 +1,6 @@
 import type { DxtradeError, BROKER } from "@/constants";
 import type { Order } from "@/domains/order";
+import type { WsManager } from "@/utils/ws-manager";
 
 export interface DxtradeConfig {
   username: string;
@@ -27,6 +28,7 @@ export interface ClientContext {
   csrf: string | null;
   accountId: string | null;
   atmosphereId: string | null;
+  wsManager: WsManager | null;
   broker: keyof typeof BROKER;
   retries: number;
   debug: boolean | string;

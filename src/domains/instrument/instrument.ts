@@ -48,7 +48,7 @@ export async function getInstruments(
               return true;
             }),
           );
-        }, 0);
+        }, 200);
       }
     });
 

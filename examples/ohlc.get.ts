@@ -9,13 +9,13 @@ const client = new DxtradeClient({
   debug: process.env.DXTRADE_DEBUG || false,
 });
 
+const symbol = process.argv[2] ?? "EURUSD";
+
 (async () => {
-  await client.connect();
+  await client.auth();
 
-  const from = new Date(new Date().setMonth(new Date().getMonth() - 1)).getTime();
-  const to = Date.now();
+  const bars = await client.ohlc.get({ symbol });
 
-  const history = await client.getTradeHistory({ from, to });
-
-  console.log("Trade history:", history);
+  console.log("Last 5 bars:", "[\n", ...bars.slice(-5), `\n...and ${bars.length - 5} more`, "\n]");
+  console.log(`Fetched ${bars.length} bars for ${symbol}`);
 })().catch(console.error);

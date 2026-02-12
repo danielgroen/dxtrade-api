@@ -9,13 +9,17 @@ const client = new DxtradeClient({
   debug: process.env.DXTRADE_DEBUG || false,
 });
 
-const symbol = process.argv[2] ?? "EURUSD";
-
 (async () => {
-  await client.connect();
+  await client.auth();
 
-  const bars = await client.getOHLC({ symbol });
+  const now = Date.now();
+  const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
 
-  console.log("Last 5 bars:", "[\n", ...bars.slice(-5), `\n...and ${bars.length - 5} more`, "\n]");
-  console.log(`Fetched ${bars.length} bars for ${symbol}`);
+  const assessments = await client.assessments.get({
+    from: oneWeekAgo,
+    to: now,
+    instrument: "EURUSD",
+  });
+
+  console.log("Assessments:", assessments);
 })().catch(console.error);

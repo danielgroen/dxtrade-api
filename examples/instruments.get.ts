@@ -10,16 +10,16 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
-  console.log("Connected — fetching instruments\n");
+  await client.auth();
+  console.log("Authenticated — fetching instruments\n");
 
   // Get all instruments
-  const instruments = await client.getInstruments();
-  console.log("instruments", "[\n", instruments[0], `\n...and ${instruments.length - 1} more`, "\n]");
+  const instruments = await client.instruments.get();
+  console.log("instruments: ", "[\n", instruments[0], `\n...and ${instruments.length - 1} more`, "\n]");
 
   console.log("\n===================================\n");
 
   // Get filtered instruments
-  const instrumentFiltered = await client.getInstruments({ symbol: "BTCUSD" });
+  const instrumentFiltered = await client.instruments.get({ symbol: "BTCUSD" });
   console.log("instrumentFiltered: ", instrumentFiltered);
 })().catch(console.error);

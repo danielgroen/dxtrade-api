@@ -1,11 +1,16 @@
 import WebSocket from "ws";
 import { WS_MESSAGE, ERROR, endpoints, DxtradeError } from "@/constants";
-import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders } from "@/utils";
+import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders, authHeaders } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Account } from ".";
 
 export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): Promise<Account.Metrics> {
   ctx.ensureSession();
+
+  if (ctx.wsManager) {
+    const body = await ctx.wsManager.waitFor<{ allMetrics: Account.Metrics }>(WS_MESSAGE.ACCOUNT_METRICS, timeout);
+    return body.allMetrics;
+  }
 
   const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);
@@ -46,13 +51,11 @@ export async function getTradeHistory(
   ctx.ensureSession();
 
   try {
-    const cookieStr = Cookies.serialize(ctx.cookies);
-
     const response = await retryRequest(
       {
-        method: "GET",
+        method: "POST",
         url: endpoints.tradeHistory(ctx.broker, params),
-        headers: { ...baseHeaders(), Cookie: cookieStr },
+        headers: authHeaders(ctx.csrf!, Cookies.serialize(ctx.cookies)),
       },
       ctx.retries,
     );

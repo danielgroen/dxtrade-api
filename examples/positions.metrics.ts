@@ -10,12 +10,8 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
-  // convert the dates to normal dates
-  const from = new Date(new Date().setMonth(new Date().getMonth() - 1)).getTime();
-  const to = Date.now();
+  await client.auth();
+  const metrics = await client.positions.metrics();
 
-  const journal = await client.getTradeJournal({ from, to });
-
-  console.log("Trade journal:", journal);
+  console.log("Position metrics:", metrics);
 })().catch(console.error);

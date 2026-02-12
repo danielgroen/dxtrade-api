@@ -10,16 +10,8 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
+  await client.auth();
+  const positions = await client.positions.get();
 
-  const now = Date.now();
-  const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
-
-  const assessments = await client.getAssessments({
-    from: oneWeekAgo,
-    to: now,
-    instrument: "EURUSD",
-  });
-
-  console.log("Assessments:", assessments);
+  console.log("Positions: ", positions);
 })().catch(console.error);

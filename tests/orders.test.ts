@@ -38,8 +38,34 @@ describe("getOrders", () => {
   it("should return orders from WebSocket ORDERS message", async () => {
     const ctx = createMockContext();
     const mockOrders = [
-      { account: "ACC-123", orderId: 1, orderCode: "OC1", type: "LIMIT", instrument: "EURUSD", status: "WORKING", finalStatus: false, side: "BUY", tif: "GTC", legs: [], issueTime: "2024-01-01", transactionTime: "2024-01-01" },
-      { account: "ACC-123", orderId: 2, orderCode: "OC2", type: "STOP", instrument: "BTCUSD", status: "WORKING", finalStatus: false, side: "SELL", tif: "GTC", legs: [], issueTime: "2024-01-01", transactionTime: "2024-01-01" },
+      {
+        account: "ACC-123",
+        orderId: 1,
+        orderCode: "OC1",
+        type: "LIMIT",
+        instrument: "EURUSD",
+        status: "WORKING",
+        finalStatus: false,
+        side: "BUY",
+        tif: "GTC",
+        legs: [],
+        issueTime: "2024-01-01",
+        transactionTime: "2024-01-01",
+      },
+      {
+        account: "ACC-123",
+        orderId: 2,
+        orderCode: "OC2",
+        type: "STOP",
+        instrument: "BTCUSD",
+        status: "WORKING",
+        finalStatus: false,
+        side: "SELL",
+        tif: "GTC",
+        legs: [],
+        issueTime: "2024-01-01",
+        transactionTime: "2024-01-01",
+      },
     ];
 
     const promise = getOrders(ctx);
@@ -157,7 +183,7 @@ describe("cancelAllOrders", () => {
     setTimeout(() => {
       const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.ORDERS, body: mockOrders });
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
-    }, 0);
+    }, 200);
 
     mockRetryRequest.mockResolvedValue({ status: 200 });
 
@@ -177,7 +203,7 @@ describe("cancelAllOrders", () => {
     setTimeout(() => {
       const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.ORDERS, body: mockOrders });
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
-    }, 0);
+    }, 200);
 
     await cancelAllOrders(ctx);
 
@@ -190,7 +216,7 @@ describe("cancelAllOrders", () => {
     setTimeout(() => {
       const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.ORDERS, body: [] });
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
-    }, 0);
+    }, 200);
 
     await cancelAllOrders(ctx);
 

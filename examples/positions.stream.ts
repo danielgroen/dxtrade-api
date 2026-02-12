@@ -11,7 +11,17 @@ const client = new DxtradeClient({
 
 (async () => {
   await client.connect();
-  const metrics = await client.getPositionMetrics();
+  console.log("Connected — streaming positions...\n");
 
-  console.log("Position metrics:", metrics);
+  const unsubscribe = client.positions.stream((positions) => {
+    console.log("Positions: ", positions);
+    console.log();
+  });
+
+  // Stream for 60 seconds then clean up
+  setTimeout(() => {
+    console.log("Unsubscribing and disconnecting...");
+    unsubscribe();
+    client.disconnect();
+  }, 60_000);
 })().catch(console.error);

@@ -1,6 +1,6 @@
 {
   "name": "@danielgroen/dxtrade-api",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "Unofficial TypeScript client for the DXtrade trading API. Connect, trade, and manage positions on any broker that supports DXtrade.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

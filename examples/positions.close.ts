@@ -10,10 +10,10 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
+  await client.auth();
   // TODO:: improve parameters! maybe even have a "closeWholePosition" function
 
-  const positions = await client.closePosition({
+  const positions = await client.positions.close({
     legs: [
       {
         instrumentId: 3438,

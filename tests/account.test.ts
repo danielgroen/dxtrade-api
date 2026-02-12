@@ -36,7 +36,7 @@ describe("getTradeHistory", () => {
     expect(result).toEqual(mockHistory);
     expect(mockRetryRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "GET",
+        method: "POST",
         url: expect.stringContaining("/api/history?from=1704067200000&to=1704153600000"),
       }),
       ctx.retries,

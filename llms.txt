@@ -18,46 +18,54 @@ const client = new DxtradeClient({
   accountId: "optional_account_id",
 });
 
-await client.connect();
+await client.connect(); // auth + persistent WebSocket (recommended)
+// or: await client.auth(); // lightweight, no persistent WS
 
 ## Available Methods
 
 ### Session
-- client.connect() — Login, fetch CSRF, WebSocket handshake, optional account switch. Call this first.
-- client.login() — Authenticate with broker (called automatically by connect)
-- client.fetchCsrf() — Fetch CSRF token (called automatically by connect)
+- client.connect() — Auth + persistent WebSocket. Recommended for most use cases. Call this first.
+- client.auth() — Lightweight: login, fetch CSRF, WebSocket handshake, optional account switch. No persistent WS.
+- client.disconnect() — Close the persistent WebSocket connection
+- client.login() — Authenticate with broker (called automatically by connect/auth)
+- client.fetchCsrf() — Fetch CSRF token (called automatically by connect/auth)
 - client.switchAccount(accountId: string) — Switch to a specific trading account
 
-### Market Data
-- client.getSymbolSuggestions(text: string) — Search symbols by name, returns Symbol.Suggestion[]
-- client.getSymbolInfo(symbol: string) — Get instrument info (volume limits, lot size), returns Symbol.Info
-- client.getSymbolLimits() — Get order size limits for all symbols, returns Symbol.Limits[]
-- client.getInstruments(params?: Partial<Instrument.Info>) — Get all instruments, optionally filtered (e.g. { type: "FOREX" })
-- client.getOHLC(params: OHLC.Params) — Fetch OHLC price bars for a symbol, returns OHLC.Bar[]
+### Positions
+- client.positions.get() — Get all open positions, returns Position.Get[]
+- client.positions.close(params: Position.Close) — Close a position (supports partial closes via the quantity field)
+- client.positions.closeAll() — Close all open positions with market orders
+- client.positions.metrics() — Get position-level P&L metrics, returns Position.Metrics[]
+- client.positions.stream(callback: (positions: Position.Get[]) => void) — Stream real-time position updates, requires connect(). Returns unsubscribe function.
+
+### Orders
+- client.orders.get() — Get all pending/open orders, returns Order.Get[]
+- client.orders.submit(params: Order.SubmitParams) — Submit order and wait for WebSocket confirmation, returns Order.Update
+  Required params: symbol, side (SIDE.BUY | SIDE.SELL), quantity, orderType (ORDER_TYPE.MARKET | LIMIT | STOP), instrumentId
+  Optional params: limitPrice, stopPrice, stopLoss, takeProfit, timeInForce (TIF.GTC | DAY | GTD)
+- client.orders.cancel(orderChainId: number) — Cancel a single pending order by its order chain ID
+- client.orders.cancelAll() — Cancel all pending orders (fetches orders then cancels each)
+
+### Account
+- client.account.metrics() — Get equity, balance, margin, open P&L, returns Account.Metrics
+- client.account.tradeJournal({ from: number, to: number }) — Fetch trade journal for date range (Unix timestamps)
+- client.account.tradeHistory({ from: number, to: number }) — Fetch trade history for date range (Unix timestamps), returns Account.TradeHistory[]
+
+### Symbols
+- client.symbols.search(text: string) — Search symbols by name, returns Symbol.Suggestion[]
+- client.symbols.info(symbol: string) — Get instrument info (volume limits, lot size), returns Symbol.Info
+- client.symbols.limits() — Get order size limits for all symbols, returns Symbol.Limits[]
+
+### Instruments
+- client.instruments.get(params?: Partial<Instrument.Info>) — Get all instruments, optionally filtered (e.g. { type: "FOREX" })
+
+### OHLC
+- client.ohlc.get(params: OHLC.Params) — Fetch OHLC price bars for a symbol, returns OHLC.Bar[]
   Required params: symbol (string)
   Optional params: resolution (seconds, default 300), range (seconds, default 345600), maxBars (default 3500), priceField ("bid" | "ask", default "bid")
 
-### Trading
-- client.submitOrder(params: Order.SubmitParams) — Submit order and wait for WebSocket confirmation, returns Order.Update
-  Required params: symbol, side (SIDE.BUY | SIDE.SELL), quantity, orderType (ORDER_TYPE.MARKET | LIMIT | STOP), instrumentId
-  Optional params: limitPrice, stopPrice, stopLoss, takeProfit, timeInForce (TIF.GTC | DAY | GTD)
-- client.getOrders() — Get all pending/open orders via WebSocket, returns Order.Get[]
-- client.cancelOrder(orderChainId: number) — Cancel a single pending order by its order chain ID
-- client.cancelAllOrders() — Cancel all pending orders (fetches orders then cancels each)
-
-### Positions
-- client.getPositions() — Get all open positions via WebSocket, returns Position.Get[]
-- client.closePosition(params: Position.Close) — Close a position (supports partial closes via the quantity field)
-- client.closeAllPositions() — Close all open positions with market orders
-- client.getPositionMetrics() — Get position-level P&L metrics via WebSocket, returns Position.Metrics[]
-
-### Account
-- client.getAccountMetrics() — Get equity, balance, margin, open P&L, returns Account.Metrics
-- client.getTradeJournal({ from: number, to: number }) — Fetch trade journal for date range (Unix timestamps)
-- client.getTradeHistory({ from: number, to: number }) — Fetch trade history for date range (Unix timestamps), returns Account.TradeHistory[]
-
-### Analytics
-- client.getAssessments(params: Assessments.Params) — Fetch PnL assessments for a date range
+### Assessments
+- client.assessments.get(params: Assessments.Params) — Fetch PnL assessments for a date range
 
 ## Enums
 
@@ -85,4 +93,4 @@ const client = new DxtradeClient({
 ## Error Handling
 
 All errors are instances of DxtradeError with properties: code (string) and message (string).
-Common error codes: NO_SESSION, ORDER_TIMEOUT, ORDER_ERROR, POSITION_CLOSE_ERROR.
+Common error codes: NO_SESSION, ORDER_TIMEOUT, ORDER_ERROR, POSITION_CLOSE_ERROR, STREAM_REQUIRES_CONNECT.

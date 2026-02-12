@@ -10,8 +10,8 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
-  const metrics = await client.getAccountMetrics();
+  await client.auth();
+  const metrics = await client.account.metrics();
 
   console.log("Account metrics:", metrics);
 })().catch(console.error);

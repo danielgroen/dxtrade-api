@@ -6,9 +6,16 @@ const client = new DxtradeClient({
   password: process.env.DXTRADE_PASSWORD!,
   broker: process.env.DXTRADE_BROKER! || BROKER.FTMO,
   accountId: process.env.DXTRADE_ACCOUNT_ID,
-  debug: true,
+  debug: process.env.DXTRADE_DEBUG || false,
 });
 
 (async () => {
-  await client.connect();
+  await client.auth();
+
+  const from = new Date(new Date().setMonth(new Date().getMonth() - 1)).getTime();
+  const to = Date.now();
+
+  const history = await client.account.tradeHistory({ from, to });
+
+  console.log("Trade history:", history);
 })().catch(console.error);

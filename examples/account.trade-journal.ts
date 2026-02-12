@@ -10,12 +10,12 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
+  await client.auth();
+  // convert the dates to normal dates
+  const from = new Date(new Date().setMonth(new Date().getMonth() - 1)).getTime();
+  const to = Date.now();
 
-  const positions = await client.getPositions();
-  console.log(`Closing ${positions.length} position(s)...`);
+  const journal = await client.account.tradeJournal({ from, to });
 
-  await client.closeAllPositions();
-
-  console.log("All positions closed");
+  console.log("Trade journal:", journal);
 })().catch(console.error);

@@ -34,7 +34,7 @@ export const endpoints = {
     `${base}/api/tradejournal?from=${params.from}&to=${params.to}`,
 
   tradeHistory: (base: string, params: { from: number; to: number }) =>
-    `${base}/api/history?from=${params.from}&to=${params.to}&orderId=`,
+    `${base}/api/history?from=${params.from}&to=${params.to}`,
 
   subscribeInstruments: (base: string) => `${base}/api/instruments/subscribeInstrumentSymbols`,
 

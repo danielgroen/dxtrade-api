@@ -89,7 +89,7 @@ export async function getSymbolLimits(ctx: ClientContext, timeout = 30_000): Pro
           clearTimeout(timer);
           ws.close();
           resolve(limits);
-        }, 0);
+        }, 200);
       }
     });
 

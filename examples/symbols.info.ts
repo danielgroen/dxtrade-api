@@ -10,18 +10,18 @@ const client = new DxtradeClient({
 });
 
 (async () => {
-  await client.connect();
+  await client.auth();
 
   const query = process.argv[2] ?? "EURUSD";
-  const suggestions = await client.getSymbolSuggestions(query);
+  const suggestions = await client.symbols.search(query);
   console.log("suggestions", suggestions);
   console.log("\n===================================\n");
 
   const symbol = suggestions[0];
-  const info = await client.getSymbolInfo(symbol.name);
+  const info = await client.symbols.info(symbol.name);
   console.log("info", info);
   console.log("\n===================================\n");
 
-  const symbolLimits = await client.getSymbolLimits();
+  const symbolLimits = await client.symbols.limits();
   console.log("symbolLimits: ", "[\n", symbolLimits[0], `\n...and ${symbolLimits.length - 1} more`, "\n]");
 })().catch(console.error);

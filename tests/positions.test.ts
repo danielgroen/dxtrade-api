@@ -54,7 +54,9 @@ describe("getPositionMetrics", () => {
 
   it("should ignore non-matching WS message types", async () => {
     const ctx = createMockContext();
-    const mockMetrics = [{ positionCode: "POS-1", openPl: 100, openPlPerLot: 10, currentPrice: 1.1, convertedOpenPl: 100 }];
+    const mockMetrics = [
+      { positionCode: "POS-1", openPl: 100, openPlPerLot: 10, currentPrice: 1.1, convertedOpenPl: 100 },
+    ];
 
     const promise = getPositionMetrics(ctx);
 
@@ -141,7 +143,7 @@ describe("closeAllPositions", () => {
     setTimeout(() => {
       const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: mockPositions });
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
-    }, 0);
+    }, 200);
 
     mockRetryRequest.mockResolvedValue({ status: 200 });
 
@@ -171,7 +173,7 @@ describe("closeAllPositions", () => {
     setTimeout(() => {
       const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: [] });
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
-    }, 0);
+    }, 200);
 
     await closeAllPositions(ctx);
 

@@ -94,6 +94,10 @@ function createOrderListener(
 export async function getOrders(ctx: ClientContext, timeout = 30_000): Promise<Order.Get[]> {
   ctx.ensureSession();
 
+  if (ctx.wsManager) {
+    return ctx.wsManager.waitFor<Order.Get[]>(WS_MESSAGE.ORDERS, timeout);
+  }
+
   const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);
 

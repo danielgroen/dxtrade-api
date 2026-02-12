@@ -16,5 +16,6 @@ const client = new DxtradeClient({
 
 (async () => {
   await client.connect();
-  console.log("Connected successfully");
+  console.log("Connected successfully (persistent WS open)");
+  client.disconnect();
 })().catch(console.error);

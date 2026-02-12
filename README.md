@@ -29,6 +29,8 @@ npm install dxtrade-api
 - [x] OHLC / price bar data
 - [x] PnL assessments
 - [x] Multi-broker support (FTMO, Eightcap, Lark Funding)
+- [x] Persistent WebSocket with `connect()`
+- [x] Real-time position streaming
 - [x] Full TypeScript support
 - [ ] Batch orders
 - [ ] Modify existing orders
@@ -46,12 +48,13 @@ const client = new DxtradeClient({
   accountId: "optional_account_id",
 });
 
+// connect() = auth + persistent WebSocket (recommended)
 await client.connect();
 
-const suggestions = await client.getSymbolSuggestions("EURUSD");
+const suggestions = await client.symbols.search("EURUSD");
 const symbol = suggestions[0];
 
-const order = await client.submitOrder({
+const order = await client.orders.submit({
   symbol: symbol.name,
   side: SIDE.BUY,
   quantity: 0.01,
@@ -60,6 +63,18 @@ const order = await client.submitOrder({
 });
 
 console.log(`Order ${order.orderId}: ${order.status}`);
+client.disconnect();
+```
+
+## Connection Modes
+
+```ts
+// Persistent WebSocket (recommended) — reuses one WS for all data, enables streaming
+await client.connect();
+client.disconnect(); // when done
+
+// Lightweight — auth only, each data call opens a temporary WebSocket
+await client.auth();
 ```
 
 ## Configuration
@@ -89,42 +104,51 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 
 ### Session
 
-- `client.connect()` — Login, fetch CSRF, WebSocket handshake, optional account switch
+- `client.connect()` — Auth + persistent WebSocket. Recommended for most use cases.
+- `client.auth()` — Lightweight: login, fetch CSRF, WebSocket handshake, optional account switch. No persistent WS.
+- `client.disconnect()` — Close the persistent WebSocket connection
 - `client.login()` — Authenticate with broker
 - `client.fetchCsrf()` — Fetch CSRF token from broker page
 - `client.switchAccount(accountId)` — Switch to a specific account
 
-### Market Data
-
-- `client.getSymbolSuggestions(text)` — Search for symbols
-- `client.getSymbolInfo(symbol)` — Get instrument info (volume limits, lot size)
-- `client.getSymbolLimits()` — Get order size limits and stop/limit distances for all symbols
-- `client.getInstruments(params?)` — Get all available instruments, optionally filtered by partial match (e.g. `{ type: "FOREX" }`)
-- `client.getOHLC(params)` — Fetch OHLC price bars for a symbol (resolution, range, maxBars, priceField)
-
-### Trading
-
-- `client.submitOrder(params)` — Submit an order and wait for WebSocket confirmation
-- `client.getOrders()` — Get all pending/open orders via WebSocket
-- `client.cancelOrder(orderChainId)` — Cancel a single pending order
-- `client.cancelAllOrders()` — Cancel all pending orders
-
 ### Positions
 
-- `client.getPositions()` — Get all open positions via WebSocket
-- `client.closePosition(params)` — Close a position (supports partial closes via the quantity field)
-- `client.closeAllPositions()` — Close all open positions with market orders
-- `client.getPositionMetrics()` — Get position-level P&L metrics via WebSocket
+- `client.positions.get()` — Get all open positions
+- `client.positions.close(params)` — Close a position (supports partial closes via the quantity field)
+- `client.positions.closeAll()` — Close all open positions with market orders
+- `client.positions.metrics()` — Get position-level P&L metrics
+- `client.positions.stream(callback)` — Stream real-time position updates (requires `connect()`). Returns an unsubscribe function.
+
+### Orders
+
+- `client.orders.get()` — Get all pending/open orders
+- `client.orders.submit(params)` — Submit an order and wait for WebSocket confirmation
+- `client.orders.cancel(orderChainId)` — Cancel a single pending order
+- `client.orders.cancelAll()` — Cancel all pending orders
 
 ### Account
 
-- `client.getAccountMetrics()` — Get account metrics (equity, balance, margin, open P&L, etc.)
-- `client.getTradeJournal({ from, to })` — Fetch trade journal entries for a date range (Unix timestamps)
-- `client.getTradeHistory({ from, to })` — Fetch trade history for a date range (Unix timestamps)
+- `client.account.metrics()` — Get account metrics (equity, balance, margin, open P&L, etc.)
+- `client.account.tradeJournal({ from, to })` — Fetch trade journal entries for a date range (Unix timestamps)
+- `client.account.tradeHistory({ from, to })` — Fetch trade history for a date range (Unix timestamps)
 
-### Analytics
+### Symbols
 
-- `client.getAssessments(params)` — Fetch PnL assessments for a date range
+- `client.symbols.search(text)` — Search for symbols
+- `client.symbols.info(symbol)` — Get instrument info (volume limits, lot size)
+- `client.symbols.limits()` — Get order size limits and stop/limit distances for all symbols
+
+### Instruments
+
+- `client.instruments.get(params?)` — Get all available instruments, optionally filtered by partial match (e.g. `{ type: "FOREX" }`)
+
+### OHLC
+
+- `client.ohlc.get(params)` — Fetch OHLC price bars for a symbol (resolution, range, maxBars, priceField)
+
+### Assessments
+
+- `client.assessments.get(params)` — Fetch PnL assessments for a date range
 
 ## Enums
 
@@ -157,23 +181,23 @@ const client = new DxtradeClient({
 ```bash
 cp .env.example .env  # fill in credentials
 npm run example:connect
-npm run example:order
-npm run example:orders
-npm run example:positions
-npm run example:close-position
-npm run example:close-all-positions
-npm run example:position-metrics
-npm run example:assessments
-npm run example:assessments:btc
-npm run example:account
-npm run example:instruments
-npm run example:ohlc
-npm run example:instruments:forex
-npm run example:symbol
-npm run example:symbol:btc
-npm run example:trade-journal
-npm run example:trade-history
 npm run example:debug
+npm run example:positions:get
+npm run example:positions:close
+npm run example:positions:close-all
+npm run example:positions:metrics
+npm run example:positions:stream
+npm run example:orders:submit
+npm run example:account:metrics
+npm run example:account:trade-journal
+npm run example:account:trade-history
+npm run example:symbols:info
+npm run example:symbols:info:btc
+npm run example:instruments:get
+npm run example:instruments:get:forex
+npm run example:ohlc:get
+npm run example:assessments:get
+npm run example:assessments:get:btc
 ```
 
 ## DXtrade API Docs

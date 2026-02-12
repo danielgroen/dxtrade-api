@@ -4,8 +4,36 @@ import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders } 
 import type { ClientContext } from "@/client.types";
 import type { Position } from ".";
 
+export function streamPositions(
+  ctx: ClientContext,
+  callback: (positions: Position.Get[]) => void,
+): () => void {
+  if (!ctx.wsManager) {
+    ctx.throwError(
+      ERROR.STREAM_REQUIRES_CONNECT,
+      "Streaming requires a persistent WebSocket. Use connect() instead of auth().",
+    );
+  }
+
+  const listener = (body: Position.Get[]) => callback(body);
+  ctx.wsManager.on(WS_MESSAGE.POSITIONS, listener);
+
+  const cached = ctx.wsManager.getCached<Position.Get[]>(WS_MESSAGE.POSITIONS);
+  if (cached !== undefined) {
+    callback(cached);
+  }
+
+  return () => {
+    ctx.wsManager?.removeListener(WS_MESSAGE.POSITIONS, listener);
+  };
+}
+
 export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> {
   ctx.ensureSession();
+
+  if (ctx.wsManager) {
+    return ctx.wsManager.waitFor<Position.Get[]>(WS_MESSAGE.POSITIONS);
+  }
 
   const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);
@@ -40,6 +68,10 @@ export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> 
 
 export async function getPositionMetrics(ctx: ClientContext, timeout = 30_000): Promise<Position.Metrics[]> {
   ctx.ensureSession();
+
+  if (ctx.wsManager) {
+    return ctx.wsManager.waitFor<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS, timeout);
+  }
 
   const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);

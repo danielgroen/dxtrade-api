@@ -61,6 +61,13 @@ export enum ERROR {
 
   // Analytics
   ASSESSMENTS_ERROR = "ASSESSMENTS_ERROR",
+
+  // Rate limiting
+  RATE_LIMITED = "RATE_LIMITED",
+
+  // WebSocket manager
+  WS_MANAGER_ERROR = "WS_MANAGER_ERROR",
+  STREAM_REQUIRES_CONNECT = "STREAM_REQUIRES_CONNECT",
 }
 
 export enum WS_MESSAGE {

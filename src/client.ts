@@ -214,10 +214,7 @@ export class DxtradeClient {
       debug: config.debug ?? false,
       ensureSession() {
         if (!this.csrf) {
-          throw new DxtradeError(
-            ERROR.NO_SESSION,
-            "No active session. Call auth() or connect() first.",
-          );
+          throw new DxtradeError(ERROR.NO_SESSION, "No active session. Call auth() or connect() first.");
         }
       },
       throwError(code: string, message: string): never {

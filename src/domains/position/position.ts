@@ -4,10 +4,7 @@ import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders } 
 import type { ClientContext } from "@/client.types";
 import type { Position } from ".";
 
-export function streamPositions(
-  ctx: ClientContext,
-  callback: (positions: Position.Get[]) => void,
-): () => void {
+export function streamPositions(ctx: ClientContext, callback: (positions: Position.Get[]) => void): () => void {
   if (!ctx.wsManager) {
     ctx.throwError(
       ERROR.STREAM_REQUIRES_CONNECT,

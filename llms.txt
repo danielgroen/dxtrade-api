@@ -41,14 +41,20 @@ await client.connect();
 - client.submitOrder(params: Order.SubmitParams) — Submit order and wait for WebSocket confirmation, returns Order.Update
   Required params: symbol, side (SIDE.BUY | SIDE.SELL), quantity, orderType (ORDER_TYPE.MARKET | LIMIT | STOP), instrumentId
   Optional params: limitPrice, stopPrice, stopLoss, takeProfit, timeInForce (TIF.GTC | DAY | GTD)
+- client.getOrders() — Get all pending/open orders via WebSocket, returns Order.Get[]
+- client.cancelOrder(orderChainId: number) — Cancel a single pending order by its order chain ID
+- client.cancelAllOrders() — Cancel all pending orders (fetches orders then cancels each)
 
 ### Positions
 - client.getPositions() — Get all open positions via WebSocket, returns Position.Get[]
-- client.closePosition(params: Position.Close) — Close a position
+- client.closePosition(params: Position.Close) — Close a position (supports partial closes via the quantity field)
+- client.closeAllPositions() — Close all open positions with market orders
+- client.getPositionMetrics() — Get position-level P&L metrics via WebSocket, returns Position.Metrics[]
 
 ### Account
 - client.getAccountMetrics() — Get equity, balance, margin, open P&L, returns Account.Metrics
 - client.getTradeJournal({ from: number, to: number }) — Fetch trade journal for date range (Unix timestamps)
+- client.getTradeHistory({ from: number, to: number }) — Fetch trade history for date range (Unix timestamps), returns Account.TradeHistory[]
 
 ### Analytics
 - client.getAssessments(params: Assessments.Params) — Fetch PnL assessments for a date range

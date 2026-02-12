@@ -21,18 +21,18 @@ npm install dxtrade-api
 
 - [x] Authentication & session management
 - [x] Submit orders (market, limit, stop)
-- [x] Positions (get & close)
-- [x] Account metrics & trade journal
+- [x] Get & cancel orders
+- [x] Positions (get, close, close all)
+- [x] Position metrics (per-position P&L)
+- [x] Account metrics, trade journal & trade history
 - [x] Symbol search & instrument info
 - [x] OHLC / price bar data
 - [x] PnL assessments
 - [x] Multi-broker support (FTMO, Eightcap, Lark Funding)
 - [x] Full TypeScript support
 - [ ] Batch orders
-- [ ] Close whole position helper
 - [ ] Modify existing orders
 - [ ] Real-time price streaming
-- [ ] Order history
 
 ## Quick Start
 
@@ -105,16 +105,22 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 ### Trading
 
 - `client.submitOrder(params)` — Submit an order and wait for WebSocket confirmation
+- `client.getOrders()` — Get all pending/open orders via WebSocket
+- `client.cancelOrder(orderChainId)` — Cancel a single pending order
+- `client.cancelAllOrders()` — Cancel all pending orders
 
 ### Positions
 
 - `client.getPositions()` — Get all open positions via WebSocket
-- `client.closePosition(params)` — Close a position
+- `client.closePosition(params)` — Close a position (supports partial closes via the quantity field)
+- `client.closeAllPositions()` — Close all open positions with market orders
+- `client.getPositionMetrics()` — Get position-level P&L metrics via WebSocket
 
 ### Account
 
 - `client.getAccountMetrics()` — Get account metrics (equity, balance, margin, open P&L, etc.)
 - `client.getTradeJournal({ from, to })` — Fetch trade journal entries for a date range (Unix timestamps)
+- `client.getTradeHistory({ from, to })` — Fetch trade history for a date range (Unix timestamps)
 
 ### Analytics
 
@@ -152,8 +158,11 @@ const client = new DxtradeClient({
 cp .env.example .env  # fill in credentials
 npm run example:connect
 npm run example:order
+npm run example:orders
 npm run example:positions
 npm run example:close-position
+npm run example:close-all-positions
+npm run example:position-metrics
 npm run example:assessments
 npm run example:assessments:btc
 npm run example:account
@@ -163,6 +172,7 @@ npm run example:instruments:forex
 npm run example:symbol
 npm run example:symbol:btc
 npm run example:trade-journal
+npm run example:trade-history
 npm run example:debug
 ```
 

@@ -66,7 +66,14 @@ export async function login(ctx: ClientContext): Promise<void> {
         data: {
           username: ctx.config.username,
           password: ctx.config.password,
-          domain: ctx.config.broker,
+
+          // TODO:: take a look at this below, domain nor vendor seems required. it works if i comment out both.
+          // however i still use it since i see brokers use it as well in the login endpoint.
+
+          // domain: ctx.config.broker,
+          vendor: ctx.config.broker,
+
+          // END TODO::
         },
         headers: { "Content-Type": "application/json" },
       },

@@ -8,7 +8,7 @@ mkdir -p .git/hooks
 cat > .git/hooks/pre-commit << 'HOOK'
 #!/bin/sh
 
-if [ -z "$COMMITIZEN" ]; then
+if [ -z "$COMMITIZEN" ] && [ -z "$CI" ]; then
   echo ""
   echo "  Direct git commit is disabled."
   echo "  Use: npm run commit"

@@ -39,6 +39,39 @@ export async function getAccountMetrics(ctx: ClientContext, timeout = 30_000): P
   });
 }
 
+export async function getTradeHistory(
+  ctx: ClientContext,
+  params: { from: number; to: number },
+): Promise<Account.TradeHistory[]> {
+  ctx.ensureSession();
+
+  try {
+    const cookieStr = Cookies.serialize(ctx.cookies);
+
+    const response = await retryRequest(
+      {
+        method: "GET",
+        url: endpoints.tradeHistory(ctx.broker, params),
+        headers: { ...baseHeaders(), Cookie: cookieStr },
+      },
+      ctx.retries,
+    );
+
+    if (response.status === 200) {
+      const setCookies = response.headers["set-cookie"] ?? [];
+      const incoming = Cookies.parse(setCookies);
+      ctx.cookies = Cookies.merge(ctx.cookies, incoming);
+      return response.data as Account.TradeHistory[];
+    } else {
+      ctx.throwError(ERROR.TRADE_HISTORY_ERROR, `Trade history failed: ${response.status}`);
+    }
+  } catch (error: unknown) {
+    if (error instanceof DxtradeError) throw error;
+    const message = error instanceof Error ? error.message : "Unknown error";
+    ctx.throwError(ERROR.TRADE_HISTORY_ERROR, `Trade history error: ${message}`);
+  }
+}
+
 export async function getTradeJournal(ctx: ClientContext, params: { from: number; to: number }): Promise<any> {
   ctx.ensureSession();
 

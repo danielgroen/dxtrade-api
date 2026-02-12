@@ -13,12 +13,17 @@ import {
 } from "@/utils";
 import type { ClientContext } from "@/client.types";
 
+interface HandshakeResult {
+  atmosphereId: string | null;
+  accountId: string | null;
+}
+
 function waitForHandshake(
   wsUrl: string,
   cookieStr: string,
   timeout = 30_000,
   debug: boolean | string = false,
-): Promise<string | null> {
+): Promise<HandshakeResult> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
     let atmosphereId: string | null = null;
@@ -40,7 +45,7 @@ function waitForHandshake(
       if (msg.accountId) {
         clearTimeout(timer);
         ws.close();
-        resolve(atmosphereId);
+        resolve({ atmosphereId, accountId: msg.accountId });
       }
     });
 
@@ -134,15 +139,19 @@ export async function connect(ctx: ClientContext): Promise<void> {
   if (ctx.debug) clearDebugLog();
 
   const cookieStr = Cookies.serialize(ctx.cookies);
-  ctx.atmosphereId = await waitForHandshake(endpoints.websocket(ctx.broker), cookieStr, 30_000, ctx.debug);
+  const handshake = await waitForHandshake(endpoints.websocket(ctx.broker), cookieStr, 30_000, ctx.debug);
+  ctx.atmosphereId = handshake.atmosphereId;
+  ctx.accountId = handshake.accountId;
 
   if (ctx.config.accountId) {
     await switchAccount(ctx, ctx.config.accountId);
-    ctx.atmosphereId = await waitForHandshake(
+    const reconnect = await waitForHandshake(
       endpoints.websocket(ctx.broker, ctx.atmosphereId),
       Cookies.serialize(ctx.cookies),
       30_000,
       ctx.debug,
     );
+    ctx.atmosphereId = reconnect.atmosphereId;
+    ctx.accountId = reconnect.accountId;
   }
 }

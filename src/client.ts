@@ -7,14 +7,20 @@ import {
   switchAccount,
   connect,
   getAccountMetrics,
+  getTradeHistory,
   getPositions,
+  getPositionMetrics,
   closePosition,
+  closeAllPositions,
   getAssessments,
   getInstruments,
   getSymbolLimits,
   getSymbolSuggestions,
   getOHLC,
   getSymbolInfo,
+  getOrders,
+  cancelOrder,
+  cancelAllOrders,
   submitOrder,
   getTradeJournal,
 } from "@/domains";
@@ -46,6 +52,7 @@ export class DxtradeClient {
       callbacks,
       cookies: {},
       csrf: null,
+      accountId: config.accountId ?? null,
       atmosphereId: null,
       broker: config.broker,
       retries: config.retries ?? 3,
@@ -109,6 +116,21 @@ export class DxtradeClient {
     return submitOrder(this._ctx, params);
   }
 
+  /** Get all pending/open orders via WebSocket. */
+  public async getOrders(): Promise<Order.Get[]> {
+    return getOrders(this._ctx);
+  }
+
+  /** Cancel a single pending order by its order chain ID. */
+  public async cancelOrder(orderChainId: number): Promise<void> {
+    return cancelOrder(this._ctx, orderChainId);
+  }
+
+  /** Cancel all pending orders. */
+  public async cancelAllOrders(): Promise<void> {
+    return cancelAllOrders(this._ctx);
+  }
+
   /** Get account metrics including equity, balance, margin, and open P&L. */
   public async getAccountMetrics(): Promise<Account.Metrics> {
     return getAccountMetrics(this._ctx);
@@ -119,9 +141,21 @@ export class DxtradeClient {
     return getPositions(this._ctx);
   }
 
-  /** Close a position. */
+  /**
+   * Close a position. Supports partial closes by specifying a quantity smaller than the full position size.
+   */
   public async closePosition(position: Position.Close): Promise<void> {
     return closePosition(this._ctx, position);
+  }
+
+  /** Close all open positions with market orders. */
+  public async closeAllPositions(): Promise<void> {
+    return closeAllPositions(this._ctx);
+  }
+
+  /** Get position-level P&L metrics via WebSocket. */
+  public async getPositionMetrics(): Promise<Position.Metrics[]> {
+    return getPositionMetrics(this._ctx);
   }
 
   /**
@@ -131,6 +165,15 @@ export class DxtradeClient {
    */
   public async getTradeJournal(params: { from: number; to: number }): Promise<any> {
     return getTradeJournal(this._ctx, params);
+  }
+
+  /**
+   * Fetch trade history for a date range.
+   * @param params.from - Start timestamp (Unix ms)
+   * @param params.to - End timestamp (Unix ms)
+   */
+  public async getTradeHistory(params: { from: number; to: number }): Promise<Account.TradeHistory[]> {
+    return getTradeHistory(this._ctx, params);
   }
 
   /** Get all available instruments, optionally filtered by partial match (e.g. `{ type: "FOREX" }`). */

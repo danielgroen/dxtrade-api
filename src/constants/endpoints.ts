@@ -22,6 +22,9 @@ export const endpoints = {
 
   closePosition: (base: string) => `${base}/api/positions/close`,
 
+  cancelOrder: (base: string, accountId: string, orderChainId: number) =>
+    `${base}/api/orders/cancel?accountId=${accountId}&orderChainId=${orderChainId}`,
+
   assessments: (base: string) => `${base}/api/assessments`,
 
   websocket: (base: string, atmosphereId?: string | null) =>
@@ -29,6 +32,9 @@ export const endpoints = {
 
   tradeJournal: (base: string, params: { from: number; to: number }) =>
     `${base}/api/tradejournal?from=${params.from}&to=${params.to}`,
+
+  tradeHistory: (base: string, params: { from: number; to: number }) =>
+    `${base}/api/history?from=${params.from}&to=${params.to}&orderId=`,
 
   subscribeInstruments: (base: string) => `${base}/api/instruments/subscribeInstrumentSymbols`,
 

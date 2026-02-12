@@ -1,6 +1,23 @@
 import type { ORDER_TYPE, SIDE, ACTION, TIF } from "@/constants/enums";
 
 export namespace Order {
+  export interface Get {
+    account: string;
+    orderId: number;
+    orderCode: string;
+    version: number;
+    type: ORDER_TYPE;
+    instrument: string;
+    status: string;
+    finalStatus: boolean;
+    side: SIDE;
+    tif: TIF;
+    legs: Leg[];
+    issueTime: string;
+    transactionTime: string;
+    [key: string]: unknown;
+  }
+
   export interface SubmitParams {
     symbol: string;
     side: SIDE;

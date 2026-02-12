@@ -9,6 +9,8 @@ const client = new DxtradeClient({
   debug: process.env.DXTRADE_DEBUG || false,
 });
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 (async () => {
   await client.connect();
 
@@ -19,6 +21,7 @@ const client = new DxtradeClient({
   const info = await client.getSymbolInfo(symbol.name);
   console.log(`Min volume: ${info.minVolume}, Lot size: ${info.lotSize}`);
 
+  // 1. Submit a market order
   const order = await client.submitOrder({
     symbol: symbol.name,
     side: SIDE.BUY,
@@ -26,6 +29,28 @@ const client = new DxtradeClient({
     orderType: ORDER_TYPE.MARKET,
     instrumentId: symbol.id,
   });
-
   console.log(`Order filled: ${order.orderId} — status: ${order.status}`);
+
+  // 2. Wait 2 seconds, then close the position
+  await sleep(2000);
+  console.log("\nClosing position...");
+  await client.closeAllPositions();
+  console.log("All positions closed");
+
+  // 3. Wait 2 seconds, then submit a limit order and immediately cancel it
+  await sleep(2000);
+  console.log("\nPlacing limit order...");
+  const limitOrder = await client.submitOrder({
+    symbol: symbol.name,
+    side: SIDE.BUY,
+    quantity: info.minVolume,
+    orderType: ORDER_TYPE.LIMIT,
+    price: 1.0,
+    instrumentId: symbol.id,
+  });
+  console.log(`Limit order placed: ${limitOrder.orderId} — status: ${limitOrder.status}`);
+
+  console.log("Cancelling order...");
+  await client.cancelAllOrders();
+  console.log("All orders cancelled");
 })().catch(console.error);

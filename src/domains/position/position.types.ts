@@ -15,6 +15,15 @@ export namespace Position {
     stopLoss: number | null;
   }
 
+  export interface Metrics {
+    positionCode: string;
+    openPl: number;
+    openPlPerLot: number;
+    currentPrice: number;
+    convertedOpenPl: number;
+    [key: string]: unknown;
+  }
+
   export interface Close {
     legs: {
       instrumentId: number;

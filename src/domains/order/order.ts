@@ -91,6 +91,74 @@ function createOrderListener(
   return { promise, ready };
 }
 
+export async function getOrders(ctx: ClientContext, timeout = 30_000): Promise<Order.Get[]> {
+  ctx.ensureSession();
+
+  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
+  const cookieStr = Cookies.serialize(ctx.cookies);
+
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
+
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new DxtradeError(ERROR.ORDERS_TIMEOUT, "Orders request timed out"));
+    }, timeout);
+
+    ws.on("message", (data) => {
+      const msg = parseWsData(data);
+      if (shouldLog(msg, ctx.debug)) debugLog(msg);
+
+      if (typeof msg === "string") return;
+      if (msg.type === WS_MESSAGE.ORDERS) {
+        clearTimeout(timer);
+        ws.close();
+        resolve(msg.body as Order.Get[]);
+      }
+    });
+
+    ws.on("error", (error) => {
+      clearTimeout(timer);
+      ws.close();
+      reject(new DxtradeError(ERROR.ORDERS_ERROR, `Orders error: ${error.message}`));
+    });
+  });
+}
+
+export async function cancelOrder(ctx: ClientContext, orderChainId: number): Promise<void> {
+  ctx.ensureSession();
+
+  const accountId = ctx.accountId ?? ctx.config.accountId;
+  if (!accountId) {
+    ctx.throwError(ERROR.CANCEL_ORDER_ERROR, "accountId is required to cancel an order");
+  }
+
+  try {
+    await retryRequest(
+      {
+        method: "DELETE",
+        url: endpoints.cancelOrder(ctx.broker, accountId, orderChainId),
+        headers: authHeaders(ctx.csrf!, Cookies.serialize(ctx.cookies)),
+      },
+      ctx.retries,
+    );
+  } catch (error: unknown) {
+    if (error instanceof DxtradeError) throw error;
+    const message =
+      error instanceof Error ? ((error as any).response?.data?.message ?? error.message) : "Unknown error";
+    ctx.throwError(ERROR.CANCEL_ORDER_ERROR, `Cancel order error: ${message}`);
+  }
+}
+
+export async function cancelAllOrders(ctx: ClientContext): Promise<void> {
+  const orders = await getOrders(ctx);
+  const pending = orders.filter((o) => !o.finalStatus);
+
+  for (const order of pending) {
+    await cancelOrder(ctx, order.orderId);
+  }
+}
+
 export async function submitOrder(ctx: ClientContext, params: Order.SubmitParams): Promise<Order.Update> {
   ctx.ensureSession();
 

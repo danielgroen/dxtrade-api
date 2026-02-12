@@ -1,6 +1,6 @@
-import { DxtradeError } from "@/constants";
+import { DxtradeError, ERROR } from "@/constants";
 import type { ClientContext, DxtradeConfig } from "./client.types";
-import type { Account, Assessments, Instrument, Order, Position, Symbol } from "./domains";
+import type { Account, Assessments, Instrument, OHLC, Order, Position, Symbol } from "./domains";
 import {
   login,
   fetchCsrf,
@@ -13,6 +13,7 @@ import {
   getInstruments,
   getSymbolLimits,
   getSymbolSuggestions,
+  getOHLC,
   getSymbolInfo,
   submitOrder,
   getTradeJournal,
@@ -45,12 +46,13 @@ export class DxtradeClient {
       callbacks,
       cookies: {},
       csrf: null,
+      atmosphereId: null,
       broker: config.broker,
       retries: config.retries ?? 3,
       debug: config.debug ?? false,
       ensureSession() {
         if (!this.csrf) {
-          throw new DxtradeError("NO_SESSION", "No active session. Call login() and fetchCsrf() or connect() first.");
+          throw new DxtradeError(ERROR.NO_SESSION, "No active session. Call login() and fetchCsrf() or connect() first.");
         }
       },
       throwError(code: string, message: string): never {
@@ -136,5 +138,17 @@ export class DxtradeClient {
   /** Fetch PnL assessments for an instrument within a date range. */
   public async getAssessments(params: Assessments.Params): Promise<Assessments.Response> {
     return getAssessments(this._ctx, params);
+  }
+
+  /**
+   * Fetch OHLC price bars for a symbol.
+   * @param params.symbol - Instrument symbol (e.g. "EURUSD")
+   * @param params.resolution - Bar period in seconds (default: 60 = 1 min)
+   * @param params.range - Lookback window in seconds (default: 432000 = 5 days)
+   * @param params.maxBars - Maximum bars to return (default: 3500)
+   * @param params.priceField - "bid" or "ask" (default: "bid")
+   */
+  public async getOHLC(params: OHLC.Params): Promise<OHLC.Bar[]> {
+    return getOHLC(this._ctx, params);
   }
 }

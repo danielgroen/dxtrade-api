@@ -1,4 +1,4 @@
-import { endpoints, DxtradeError } from "@/constants";
+import { endpoints, DxtradeError, ERROR } from "@/constants";
 import { Cookies, authHeaders, retryRequest } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Assessments } from ".";
@@ -26,6 +26,6 @@ export async function getAssessments(ctx: ClientContext, params: Assessments.Par
   } catch (error: unknown) {
     if (error instanceof DxtradeError) throw error;
     const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError("ASSESSMENTS_ERROR", `Error fetching assessments: ${message}`);
+    ctx.throwError(ERROR.ASSESSMENTS_ERROR, `Error fetching assessments: ${message}`);
   }
 }

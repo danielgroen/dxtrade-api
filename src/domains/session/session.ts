@@ -1,11 +1,12 @@
 import WebSocket from "ws";
-import { endpoints, DxtradeError } from "@/constants";
+import { endpoints, DxtradeError, ERROR } from "@/constants";
 import {
   Cookies,
   authHeaders,
   cookieOnlyHeaders,
   retryRequest,
   clearDebugLog,
+  parseAtmosphereId,
   parseWsData,
   shouldLog,
   debugLog,
@@ -17,9 +18,10 @@ function waitForHandshake(
   cookieStr: string,
   timeout = 30_000,
   debug: boolean | string = false,
-): Promise<void> {
+): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
+    let atmosphereId: string | null = null;
 
     const timer = setTimeout(() => {
       ws.close();
@@ -27,6 +29,10 @@ function waitForHandshake(
     }, timeout);
 
     ws.on("message", (data) => {
+      if (!atmosphereId) {
+        atmosphereId = parseAtmosphereId(data);
+      }
+
       const msg = parseWsData(data);
       if (shouldLog(msg, debug)) debugLog(msg);
 
@@ -34,7 +40,7 @@ function waitForHandshake(
       if (msg.accountId) {
         clearTimeout(timer);
         ws.close();
-        resolve();
+        resolve(atmosphereId);
       }
     });
 
@@ -68,12 +74,12 @@ export async function login(ctx: ClientContext): Promise<void> {
       ctx.cookies = Cookies.merge(ctx.cookies, incoming);
       ctx.callbacks.onLogin?.();
     } else {
-      ctx.throwError("LOGIN_FAILED", `Login failed: ${response.status}`);
+      ctx.throwError(ERROR.LOGIN_FAILED, `Login failed: ${response.status}`);
     }
   } catch (error: unknown) {
     if (error instanceof DxtradeError) throw error;
     const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError("LOGIN_ERROR", `Login error: ${message}`);
+    ctx.throwError(ERROR.LOGIN_ERROR, `Login error: ${message}`);
   }
 }
 
@@ -93,12 +99,12 @@ export async function fetchCsrf(ctx: ClientContext): Promise<void> {
     if (csrfMatch) {
       ctx.csrf = csrfMatch[1];
     } else {
-      ctx.throwError("CSRF_NOT_FOUND", "CSRF token not found");
+      ctx.throwError(ERROR.CSRF_NOT_FOUND, "CSRF token not found");
     }
   } catch (error: unknown) {
     if (error instanceof DxtradeError) throw error;
     const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError("CSRF_ERROR", `CSRF fetch error: ${message}`);
+    ctx.throwError(ERROR.CSRF_ERROR, `CSRF fetch error: ${message}`);
   }
 }
 
@@ -118,7 +124,7 @@ export async function switchAccount(ctx: ClientContext, accountId: string): Prom
   } catch (error: unknown) {
     if (error instanceof DxtradeError) throw error;
     const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError("ACCOUNT_SWITCH_ERROR", `Error switching account: ${message}`);
+    ctx.throwError(ERROR.ACCOUNT_SWITCH_ERROR, `Error switching account: ${message}`);
   }
 }
 
@@ -127,12 +133,16 @@ export async function connect(ctx: ClientContext): Promise<void> {
   await fetchCsrf(ctx);
   if (ctx.debug) clearDebugLog();
 
-  const wsUrl = endpoints.websocket(ctx.broker);
   const cookieStr = Cookies.serialize(ctx.cookies);
-  await waitForHandshake(wsUrl, cookieStr, 30_000, ctx.debug);
+  ctx.atmosphereId = await waitForHandshake(endpoints.websocket(ctx.broker), cookieStr, 30_000, ctx.debug);
 
   if (ctx.config.accountId) {
     await switchAccount(ctx, ctx.config.accountId);
-    await waitForHandshake(endpoints.websocket(ctx.broker), Cookies.serialize(ctx.cookies), 30_000, ctx.debug);
+    ctx.atmosphereId = await waitForHandshake(
+      endpoints.websocket(ctx.broker, ctx.atmosphereId),
+      Cookies.serialize(ctx.cookies),
+      30_000,
+      ctx.debug,
+    );
   }
 }

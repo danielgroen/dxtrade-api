@@ -36,6 +36,7 @@
     "example:instruments": "tsx examples/instruments.ts",
     "example:instruments:forex": "tsx examples/instruments.ts FOREX",
     "example:symbol": "tsx examples/symbol-info.ts",
+    "example:ohlc": "tsx examples/ohlc.ts",
     "example:symbol:btc": "tsx examples/symbol-info.ts BTCUSD",
     "============= Git =============": "",
     "commit": "COMMITIZEN=1 cz",

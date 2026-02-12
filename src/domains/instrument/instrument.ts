@@ -1,6 +1,5 @@
 import WebSocket from "ws";
-import { endpoints, DxtradeError } from "@/constants";
-import { WS_MESSAGE } from "@/constants/enums";
+import { endpoints, DxtradeError, WS_MESSAGE, ERROR } from "@/constants";
 import { Cookies, parseWsData, shouldLog, debugLog } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Instrument } from ".";
@@ -12,7 +11,7 @@ export async function getInstruments(
 ): Promise<Instrument.Info[]> {
   ctx.ensureSession();
 
-  const wsUrl = endpoints.websocket(ctx.broker);
+  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
   const cookieStr = Cookies.serialize(ctx.cookies);
 
   return new Promise((resolve, reject) => {
@@ -20,7 +19,7 @@ export async function getInstruments(
 
     const timer = setTimeout(() => {
       ws.close();
-      reject(new DxtradeError("INSTRUMENTS_TIMEOUT", "Instruments request timed out"));
+      reject(new DxtradeError(ERROR.INSTRUMENTS_TIMEOUT, "Instruments request timed out"));
     }, timeout);
 
     let instruments: Instrument.Info[] = [];
@@ -56,7 +55,7 @@ export async function getInstruments(
     ws.on("error", (error) => {
       clearTimeout(timer);
       ws.close();
-      reject(new DxtradeError("INSTRUMENTS_ERROR", `Instruments error: ${error.message}`));
+      reject(new DxtradeError(ERROR.INSTRUMENTS_ERROR, `Instruments error: ${error.message}`));
     });
   });
 }

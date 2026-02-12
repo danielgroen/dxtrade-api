@@ -4,7 +4,25 @@ import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders } 
 import type { ClientContext } from "@/client.types";
 import type { Position } from ".";
 
-export function streamPositions(ctx: ClientContext, callback: (positions: Position.Get[]) => void): () => void {
+function mergePositionsWithMetrics(positions: Position.Get[], metrics: Position.Metrics[]): Position.Full[] {
+  const metricsMap = new Map(metrics.map((m) => [m.uid, m]));
+  return positions.map((pos) => {
+    const m = metricsMap.get(pos.uid);
+    return {
+      ...pos,
+      margin: m?.margin ?? 0,
+      plOpen: m?.plOpen ?? 0,
+      plClosed: m?.plClosed ?? 0,
+      totalCommissions: m?.totalCommissions ?? 0,
+      totalFinancing: m?.totalFinancing ?? 0,
+      plRate: m?.plRate ?? 0,
+      averagePrice: m?.averagePrice ?? 0,
+      marketValue: m?.marketValue ?? 0,
+    };
+  });
+}
+
+export function streamPositions(ctx: ClientContext, callback: (positions: Position.Full[]) => void): () => void {
   if (!ctx.wsManager) {
     ctx.throwError(
       ERROR.STREAM_REQUIRES_CONNECT,
@@ -12,24 +30,37 @@ export function streamPositions(ctx: ClientContext, callback: (positions: Positi
     );
   }
 
-  const listener = (body: Position.Get[]) => callback(body);
-  ctx.wsManager.on(WS_MESSAGE.POSITIONS, listener);
+  const emit = () => {
+    const positions = ctx.wsManager!.getCached<Position.Get[]>(WS_MESSAGE.POSITIONS);
+    const metrics = ctx.wsManager!.getCached<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS);
+    if (positions && metrics) {
+      callback(mergePositionsWithMetrics(positions, metrics));
+    }
+  };
 
-  const cached = ctx.wsManager.getCached<Position.Get[]>(WS_MESSAGE.POSITIONS);
-  if (cached !== undefined) {
-    callback(cached);
-  }
+  const onPositions = () => emit();
+  const onMetrics = () => emit();
+
+  ctx.wsManager.on(WS_MESSAGE.POSITIONS, onPositions);
+  ctx.wsManager.on(WS_MESSAGE.POSITION_METRICS, onMetrics);
+
+  emit();
 
   return () => {
-    ctx.wsManager?.removeListener(WS_MESSAGE.POSITIONS, listener);
+    ctx.wsManager?.removeListener(WS_MESSAGE.POSITIONS, onPositions);
+    ctx.wsManager?.removeListener(WS_MESSAGE.POSITION_METRICS, onMetrics);
   };
 }
 
-export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> {
+export async function getPositions(ctx: ClientContext): Promise<Position.Full[]> {
   ctx.ensureSession();
 
   if (ctx.wsManager) {
-    return ctx.wsManager.waitFor<Position.Get[]>(WS_MESSAGE.POSITIONS);
+    const [positions, metrics] = await Promise.all([
+      ctx.wsManager.waitFor<Position.Get[]>(WS_MESSAGE.POSITIONS),
+      ctx.wsManager.waitFor<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS),
+    ]);
+    return mergePositionsWithMetrics(positions, metrics);
   }
 
   const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
@@ -37,6 +68,8 @@ export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> 
 
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
+    let positions: Position.Get[] | null = null;
+    let metrics: Position.Metrics[] | null = null;
 
     const timer = setTimeout(() => {
       ws.close();
@@ -49,9 +82,15 @@ export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> 
 
       if (typeof msg === "string") return;
       if (msg.type === WS_MESSAGE.POSITIONS) {
+        positions = msg.body as Position.Get[];
+      }
+      if (msg.type === WS_MESSAGE.POSITION_METRICS) {
+        metrics = msg.body as Position.Metrics[];
+      }
+      if (positions && metrics) {
         clearTimeout(timer);
         ws.close();
-        resolve(msg.body as Position.Get[]);
+        resolve(mergePositionsWithMetrics(positions, metrics));
       }
     });
 
@@ -59,44 +98,6 @@ export async function getPositions(ctx: ClientContext): Promise<Position.Get[]> 
       clearTimeout(timer);
       ws.close();
       reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_ERROR, `Account positions error: ${error.message}`));
-    });
-  });
-}
-
-export async function getPositionMetrics(ctx: ClientContext, timeout = 30_000): Promise<Position.Metrics[]> {
-  ctx.ensureSession();
-
-  if (ctx.wsManager) {
-    return ctx.wsManager.waitFor<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS, timeout);
-  }
-
-  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
-  const cookieStr = Cookies.serialize(ctx.cookies);
-
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
-
-    const timer = setTimeout(() => {
-      ws.close();
-      reject(new DxtradeError(ERROR.POSITION_METRICS_TIMEOUT, "Position metrics timed out"));
-    }, timeout);
-
-    ws.on("message", (data) => {
-      const msg = parseWsData(data);
-      if (shouldLog(msg, ctx.debug)) debugLog(msg);
-
-      if (typeof msg === "string") return;
-      if (msg.type === WS_MESSAGE.POSITION_METRICS) {
-        clearTimeout(timer);
-        ws.close();
-        resolve(msg.body as Position.Metrics[]);
-      }
-    });
-
-    ws.on("error", (error) => {
-      clearTimeout(timer);
-      ws.close();
-      reject(new DxtradeError(ERROR.POSITION_METRICS_ERROR, `Position metrics error: ${error.message}`));
     });
   });
 }

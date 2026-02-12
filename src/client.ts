@@ -11,7 +11,6 @@ import {
   getAccountMetrics,
   getTradeHistory,
   getPositions,
-  getPositionMetrics,
   closePosition,
   closeAllPositions,
   streamPositions,
@@ -20,6 +19,7 @@ import {
   getSymbolLimits,
   getSymbolSuggestions,
   getOHLC,
+  streamOHLC,
   getSymbolInfo,
   getOrders,
   cancelOrder,
@@ -31,8 +31,8 @@ import {
 class PositionsDomain {
   constructor(private _ctx: ClientContext) {}
 
-  /** Get all open positions via WebSocket. */
-  get(): Promise<Position.Get[]> {
+  /** Get all open positions with P&L metrics merged. */
+  get(): Promise<Position.Full[]> {
     return getPositions(this._ctx);
   }
 
@@ -46,13 +46,8 @@ class PositionsDomain {
     return closeAllPositions(this._ctx);
   }
 
-  /** Get position-level P&L metrics via WebSocket. */
-  metrics(): Promise<Position.Metrics[]> {
-    return getPositionMetrics(this._ctx);
-  }
-
-  /** Stream real-time position updates. Requires connect(). Returns unsubscribe function. */
-  stream(callback: (positions: Position.Get[]) => void): () => void {
+  /** Stream real-time position updates with P&L metrics. Requires connect(). Returns unsubscribe function. */
+  stream(callback: (positions: Position.Full[]) => void): () => void {
     return streamPositions(this._ctx, callback);
   }
 }
@@ -153,6 +148,11 @@ class OhlcDomain {
   get(params: OHLC.Params): Promise<OHLC.Bar[]> {
     return getOHLC(this._ctx, params);
   }
+
+  /** Stream real-time OHLC bar updates. Requires connect(). Returns unsubscribe function. */
+  stream(params: OHLC.Params, callback: (bars: OHLC.Bar[]) => void): Promise<() => void> {
+    return streamOHLC(this._ctx, params, callback);
+  }
 }
 
 class AssessmentsDomain {
@@ -193,7 +193,7 @@ export class DxtradeClient {
   public readonly symbols: SymbolsDomain;
   /** Instrument operations: get (with optional filtering). */
   public readonly instruments: InstrumentsDomain;
-  /** OHLC price bar operations: get. */
+  /** OHLC price bar operations: get, stream. */
   public readonly ohlc: OhlcDomain;
   /** PnL assessment operations: get. */
   public readonly assessments: AssessmentsDomain;

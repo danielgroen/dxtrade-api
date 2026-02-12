@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import { DxtradeError } from "@/constants/errors";
 import { WS_MESSAGE } from "@/constants/enums";
-import { getPositionMetrics, closeAllPositions } from "@/domains/position";
+import { getPositions, closeAllPositions } from "@/domains/position";
 import { createMockContext } from "./helpers";
 
 // --- Mocks ---
@@ -32,65 +32,108 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// --- Helpers ---
+
+const mockPositions = [
+  {
+    uid: "u1",
+    accountId: "ACC-123",
+    positionKey: { instrumentId: 3438, positionCode: "POS-1" },
+    quantity: 1000,
+    cost: 1000,
+    costBasis: 1000,
+    openCost: 1000,
+    marginRate: 0.01,
+    time: 0,
+    modifiedTime: 0,
+    userLogin: "test",
+    takeProfit: null,
+    stopLoss: null,
+  },
+];
+
+const mockMetrics = [
+  {
+    uid: "u1",
+    accountId: "ACC-123",
+    margin: 10,
+    plOpen: 5.5,
+    plClosed: 0,
+    totalCommissions: -0.03,
+    totalFinancing: -0.1,
+    plRate: 1.105,
+    averagePrice: 1.1,
+    marketValue: 1100,
+  },
+];
+
+function emitBothMessages() {
+  const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: mockPositions });
+  wsInstance.emit("message", Buffer.from(`${posPayload.length}|${posPayload}`));
+
+  const metPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITION_METRICS, body: mockMetrics });
+  wsInstance.emit("message", Buffer.from(`${metPayload.length}|${metPayload}`));
+}
+
 // --- Tests ---
 
-describe("getPositionMetrics", () => {
-  it("should return metrics from WebSocket POSITION_METRICS message", async () => {
+describe("getPositions", () => {
+  it("should return merged positions with metrics", async () => {
     const ctx = createMockContext();
-    const mockMetrics = [
-      { positionCode: "POS-1", openPl: 150.5, openPlPerLot: 15.05, currentPrice: 1.1234, convertedOpenPl: 150.5 },
-      { positionCode: "POS-2", openPl: -42.0, openPlPerLot: -4.2, currentPrice: 65000.0, convertedOpenPl: -42.0 },
-    ];
 
-    const promise = getPositionMetrics(ctx);
-
-    const payload = JSON.stringify({ accountId: "ACC-123", type: WS_MESSAGE.POSITION_METRICS, body: mockMetrics });
-    wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
+    const promise = getPositions(ctx);
+    emitBothMessages();
 
     const result = await promise;
-    expect(result).toEqual(mockMetrics);
+    expect(result).toHaveLength(1);
+    expect(result[0].uid).toBe("u1");
+    expect(result[0].quantity).toBe(1000);
+    expect(result[0].plOpen).toBe(5.5);
+    expect(result[0].margin).toBe(10);
+    expect(result[0].positionKey.instrumentId).toBe(3438);
     expect(wsInstance.close).toHaveBeenCalled();
   });
 
-  it("should ignore non-matching WS message types", async () => {
+  it("should wait for both POSITIONS and POSITION_METRICS before resolving", async () => {
     const ctx = createMockContext();
-    const mockMetrics = [
-      { positionCode: "POS-1", openPl: 100, openPlPerLot: 10, currentPrice: 1.1, convertedOpenPl: 100 },
-    ];
 
-    const promise = getPositionMetrics(ctx);
+    const promise = getPositions(ctx);
 
-    // Send an unrelated message first
-    const otherPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.ACCOUNT_METRICS, body: {} });
-    wsInstance.emit("message", Buffer.from(`${otherPayload.length}|${otherPayload}`));
+    // Send only POSITIONS first — should NOT resolve yet
+    const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: mockPositions });
+    wsInstance.emit("message", Buffer.from(`${posPayload.length}|${posPayload}`));
 
-    // Then send the real one
-    const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITION_METRICS, body: mockMetrics });
-    wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
+    // Verify not resolved by checking close wasn't called
+    expect(wsInstance.close).not.toHaveBeenCalled();
+
+    // Now send POSITION_METRICS
+    const metPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITION_METRICS, body: mockMetrics });
+    wsInstance.emit("message", Buffer.from(`${metPayload.length}|${metPayload}`));
 
     const result = await promise;
-    expect(result).toEqual(mockMetrics);
+    expect(result).toHaveLength(1);
+    expect(wsInstance.close).toHaveBeenCalled();
   });
 
   it("should reject on WS error", async () => {
     const ctx = createMockContext();
 
-    const promise = getPositionMetrics(ctx);
+    const promise = getPositions(ctx);
     wsInstance.emit("error", new Error("ws failed"));
 
     await expect(promise).rejects.toThrow(DxtradeError);
-    await expect(promise).rejects.toThrow("Position metrics error: ws failed");
+    await expect(promise).rejects.toThrow("Account positions error: ws failed");
   });
 
   it("should reject on timeout", async () => {
     vi.useFakeTimers();
     const ctx = createMockContext();
 
-    const promise = getPositionMetrics(ctx, 2000);
-    vi.advanceTimersByTime(2001);
+    const promise = getPositions(ctx);
+    vi.advanceTimersByTime(30_001);
 
     await expect(promise).rejects.toThrow(DxtradeError);
-    await expect(promise).rejects.toThrow("Position metrics timed out");
+    await expect(promise).rejects.toThrow("Account positions timed out");
 
     vi.useRealTimers();
   });
@@ -98,7 +141,7 @@ describe("getPositionMetrics", () => {
   it("should throw NO_SESSION when not authenticated", async () => {
     const ctx = createMockContext({ csrf: null });
 
-    await expect(getPositionMetrics(ctx)).rejects.toThrow("No active session");
+    await expect(getPositions(ctx)).rejects.toThrow("No active session");
   });
 });
 
@@ -106,22 +149,8 @@ describe("closeAllPositions", () => {
   it("should close each position with a market order", async () => {
     const ctx = createMockContext();
 
-    const mockPositions = [
-      {
-        uid: "u1",
-        accountId: "ACC-123",
-        positionKey: { instrumentId: 3438, positionCode: "POS-1" },
-        quantity: 1000,
-        cost: 1000,
-        costBasis: 1000,
-        openCost: 1000,
-        marginRate: 0.01,
-        time: 0,
-        modifiedTime: 0,
-        userLogin: "test",
-        takeProfit: null,
-        stopLoss: null,
-      },
+    const twoPositions = [
+      ...mockPositions,
       {
         uid: "u2",
         accountId: "ACC-123",
@@ -139,10 +168,18 @@ describe("closeAllPositions", () => {
       },
     ];
 
+    const twoMetrics = [
+      ...mockMetrics,
+      { uid: "u2", accountId: "ACC-123", margin: 5, plOpen: -2, plClosed: 0, totalCommissions: 0, totalFinancing: 0, plRate: 0, averagePrice: 0, marketValue: 0 },
+    ];
+
     // getPositions uses WS, closePosition uses retryRequest
     setTimeout(() => {
-      const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: mockPositions });
-      wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
+      const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: twoPositions });
+      wsInstance.emit("message", Buffer.from(`${posPayload.length}|${posPayload}`));
+
+      const metPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITION_METRICS, body: twoMetrics });
+      wsInstance.emit("message", Buffer.from(`${metPayload.length}|${metPayload}`));
     }, 200);
 
     mockRetryRequest.mockResolvedValue({ status: 200 });
@@ -171,8 +208,11 @@ describe("closeAllPositions", () => {
     const ctx = createMockContext();
 
     setTimeout(() => {
-      const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: [] });
-      wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
+      const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: [] });
+      wsInstance.emit("message", Buffer.from(`${posPayload.length}|${posPayload}`));
+
+      const metPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITION_METRICS, body: [] });
+      wsInstance.emit("message", Buffer.from(`${metPayload.length}|${metPayload}`));
     }, 200);
 
     await closeAllPositions(ctx);

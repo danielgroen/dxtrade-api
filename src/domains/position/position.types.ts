@@ -16,12 +16,28 @@ export namespace Position {
   }
 
   export interface Metrics {
-    positionCode: string;
-    openPl: number;
-    openPlPerLot: number;
-    currentPrice: number;
-    convertedOpenPl: number;
+    uid: string;
+    accountId: string;
+    margin: number;
+    plOpen: number;
+    plClosed: number;
+    totalCommissions: number;
+    totalFinancing: number;
+    plRate: number;
+    averagePrice: number;
+    marketValue: number;
     [key: string]: unknown;
+  }
+
+  export interface Full extends Get {
+    margin: number;
+    plOpen: number;
+    plClosed: number;
+    totalCommissions: number;
+    totalFinancing: number;
+    plRate: number;
+    averagePrice: number;
+    marketValue: number;
   }
 
   export interface Close {

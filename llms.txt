@@ -32,11 +32,10 @@ await client.connect(); // auth + persistent WebSocket (recommended)
 - client.switchAccount(accountId: string) — Switch to a specific trading account
 
 ### Positions
-- client.positions.get() — Get all open positions, returns Position.Get[]
+- client.positions.get() — Get all open positions with P&L metrics merged (margin, plOpen, marketValue, etc.), returns Position.Full[]
 - client.positions.close(params: Position.Close) — Close a position (supports partial closes via the quantity field)
 - client.positions.closeAll() — Close all open positions with market orders
-- client.positions.metrics() — Get position-level P&L metrics, returns Position.Metrics[]
-- client.positions.stream(callback: (positions: Position.Get[]) => void) — Stream real-time position updates, requires connect(). Returns unsubscribe function.
+- client.positions.stream(callback: (positions: Position.Full[]) => void) — Stream real-time position updates with live P&L (requires connect()). Returns unsubscribe function.
 
 ### Orders
 - client.orders.get() — Get all pending/open orders, returns Order.Get[]
@@ -63,6 +62,7 @@ await client.connect(); // auth + persistent WebSocket (recommended)
 - client.ohlc.get(params: OHLC.Params) — Fetch OHLC price bars for a symbol, returns OHLC.Bar[]
   Required params: symbol (string)
   Optional params: resolution (seconds, default 300), range (seconds, default 345600), maxBars (default 3500), priceField ("bid" | "ask", default "bid")
+- client.ohlc.stream(params: OHLC.Params, callback: (bars: OHLC.Bar[]) => void) — Stream real-time OHLC bar updates (requires connect()). Returns Promise<() => void>. Callback receives snapshot bars first, then live updates.
 
 ### Assessments
 - client.assessments.get(params: Assessments.Params) — Fetch PnL assessments for a date range

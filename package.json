@@ -20,7 +20,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "================ Tests ================": "",
-    "test": "echo \"no test specified\";",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "=============== Examples ===============": "",
     "example:debug": "tsx examples/debug.ts",
     "example:account": "tsx examples/account-metrics.ts",
@@ -60,7 +61,8 @@
     "prettier": "^3.8.1",
     "tsup": "^8.3.6",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
   },
   "keywords": [
     "dxtrade",

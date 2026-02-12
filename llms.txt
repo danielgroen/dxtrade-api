@@ -1,0 +1,79 @@
+# DXtrade API
+
+Unofficial TypeScript client for the DXtrade trading API.
+Connect, trade, and manage positions on any broker that supports DXtrade.
+
+## Installation
+
+npm install dxtrade-api
+
+## Quick Start
+
+import { DxtradeClient, ORDER_TYPE, SIDE, BROKER } from "dxtrade-api";
+
+const client = new DxtradeClient({
+  username: "your_username",
+  password: "your_password",
+  broker: BROKER.FTMO,
+  accountId: "optional_account_id",
+});
+
+await client.connect();
+
+## Available Methods
+
+### Session
+- client.connect() — Login, fetch CSRF, WebSocket handshake, optional account switch. Call this first.
+- client.login() — Authenticate with broker (called automatically by connect)
+- client.fetchCsrf() — Fetch CSRF token (called automatically by connect)
+- client.switchAccount(accountId: string) — Switch to a specific trading account
+
+### Market Data
+- client.getSymbolSuggestions(text: string) — Search symbols by name, returns Symbol.Suggestion[]
+- client.getSymbolInfo(symbol: string) — Get instrument info (volume limits, lot size), returns Symbol.Info
+- client.getSymbolLimits() — Get order size limits for all symbols, returns Symbol.Limits[]
+- client.getInstruments(params?: Partial<Instrument.Info>) — Get all instruments, optionally filtered (e.g. { type: "FOREX" })
+
+### Trading
+- client.submitOrder(params: Order.SubmitParams) — Submit order and wait for WebSocket confirmation, returns Order.Update
+  Required params: symbol, side (SIDE.BUY | SIDE.SELL), quantity, orderType (ORDER_TYPE.MARKET | LIMIT | STOP), instrumentId
+  Optional params: limitPrice, stopPrice, stopLoss, takeProfit, timeInForce (TIF.GTC | DAY | GTD)
+
+### Positions
+- client.getPositions() — Get all open positions via WebSocket, returns Position.Get[]
+- client.closePosition(params: Position.Close) — Close a position
+
+### Account
+- client.getAccountMetrics() — Get equity, balance, margin, open P&L, returns Account.Metrics
+- client.getTradeJournal({ from: number, to: number }) — Fetch trade journal for date range (Unix timestamps)
+
+### Analytics
+- client.getAssessments(params: Assessments.Params) — Fetch PnL assessments for a date range
+
+## Enums
+
+import { ORDER_TYPE, SIDE, ACTION, TIF, BROKER } from "dxtrade-api";
+
+ORDER_TYPE: MARKET, LIMIT, STOP
+SIDE: BUY, SELL
+ACTION: OPENING, CLOSING
+TIF: GTC, DAY, GTD
+BROKER: LARKFUNDING, EIGHTCAP, FTMO
+
+## Callbacks
+
+const client = new DxtradeClient({
+  ...config,
+  callbacks: {
+    onLogin: () => {},
+    onAccountSwitch: (accountId: string) => {},
+    onOrderPlaced: (order: Order.Response) => {},
+    onOrderUpdate: (order: Order.Update) => {},
+    onError: (error: DxtradeError) => {},
+  },
+});
+
+## Error Handling
+
+All errors are instances of DxtradeError with properties: code (string) and message (string).
+Common error codes: NO_SESSION, ORDER_TIMEOUT, ORDER_ERROR, POSITION_CLOSE_ERROR.

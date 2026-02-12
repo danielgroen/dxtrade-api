@@ -23,7 +23,7 @@ import { DxtradeClient, ORDER_TYPE, SIDE, BROKER } from "dxtrade-api";
 const client = new DxtradeClient({
   username: "your_username",
   password: "your_password",
-  broker: "LARKFUNDING",
+  broker: BROKER.FTMO,
   accountId: "optional_account_id",
 });
 
@@ -86,6 +86,11 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 
 - `client.submitOrder(params)` — Submit an order and wait for WebSocket confirmation
 
+### Positions
+
+- `client.getPositions()` — Get all open positions via WebSocket
+- `client.closePosition(params)` — Close a position
+
 ### Account
 
 - `client.getAccountMetrics()` — Get account metrics (equity, balance, margin, open P&L, etc.)
@@ -127,7 +132,10 @@ const client = new DxtradeClient({
 cp .env.example .env  # fill in credentials
 npm run example:connect
 npm run example:order
+npm run example:positions
+npm run example:close-position
 npm run example:assessments
+npm run example:assessments:btc
 npm run example:account
 npm run example:instruments
 npm run example:instruments:forex

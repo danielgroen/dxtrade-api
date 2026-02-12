@@ -35,6 +35,9 @@
     "example:instruments:forex": "tsx examples/instruments.ts FOREX",
     "example:symbol": "tsx examples/symbol-info.ts",
     "example:symbol:btc": "tsx examples/symbol-info.ts BTCUSD",
+    "============= Git =============": "",
+    "commit": "COMMITIZEN=1 cz",
+    "prepare": "sh scripts/setup-hooks.sh",
     "========== Linting & Formatting ==========": "",
     "lint": "eslint \"src/**/*.ts\" \"examples/**/*.ts\"",
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"examples/**/*.ts\"",
@@ -49,6 +52,8 @@
     "@types/ws": "^8.5.14",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
+    "commitizen": "^4.3.1",
+    "cz-git": "^1.12.0",
     "dotenv": "^16.4.7",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
@@ -76,5 +81,11 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/danielgroen/dxtrade-api.git"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git",
+      "czConfig": ".czrc.js"
+    }
   }
 }

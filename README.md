@@ -4,11 +4,17 @@
 [![npm downloads](https://img.shields.io/npm/dm/@danielgroen/dxtrade-api)](https://www.npmjs.com/package/@danielgroen/dxtrade-api)
 [![license](https://img.shields.io/npm/l/@danielgroen/dxtrade-api)](LICENSE)
 [![Tests](https://github.com/danielgroen/dxtrade-api/actions/workflows/tests.yml/badge.svg)](https://github.com/danielgroen/dxtrade-api/actions/workflows/tests.yml)
-[![Publish to npm](https://github.com/danielgroen/dxtrade-api/actions/workflows/publish.yml/badge.svg)](https://github.com/danielgroen/dxtrade-api/actions/workflows/publish.yml)
+[![Publish](https://github.com/danielgroen/dxtrade-api/actions/workflows/publish.yml/badge.svg)](https://github.com/danielgroen/dxtrade-api/actions/workflows/publish.yml)
 
 [![DXtrade API](https://raw.githubusercontent.com/danielgroen/dxtrade-api/master/public/logo-dxtrade.svg)](https://demo.dx.trade/developers/#/)
 
-TypeScript client library for the DXtrade trading API based upon Nodejs.
+Unofficial TypeScript client for the DXtrade trading API. Connect, trade, and manage positions on any broker that supports DXtrade.
+
+## Install
+
+```bash
+npm install dxtrade-api
+```
 
 ## Features
 
@@ -24,12 +30,6 @@ TypeScript client library for the DXtrade trading API based upon Nodejs.
 - [ ] Modify existing orders
 - [ ] Real-time price streaming
 - [ ] Order history
-
-## Install
-
-```bash
-npm install dxtrade-api
-```
 
 ## Quick Start
 

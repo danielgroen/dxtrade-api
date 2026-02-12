@@ -10,6 +10,21 @@
 
 TypeScript client library for the DXtrade trading API based upon Nodejs.
 
+## Features
+
+- [x] Authentication & session management
+- [x] Submit orders (market, limit, stop)
+- [x] Positions (get & close)
+- [x] Account metrics & trade journal
+- [x] Symbol search & instrument info
+- [x] PnL assessments
+- [x] Multi-broker support (FTMO, Eightcap, Lark Funding)
+- [ ] Batch orders
+- [ ] Close whole position helper
+- [ ] Modify existing orders
+- [ ] Real-time price streaming
+- [ ] Order history
+
 ## Install
 
 ```bash

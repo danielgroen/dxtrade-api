@@ -33,7 +33,8 @@ await client.connect(); // auth + persistent WebSocket (recommended)
 
 ### Positions
 - client.positions.get() — Get all open positions with P&L metrics merged (margin, plOpen, marketValue, etc.), returns Position.Full[]
-- client.positions.close(params: Position.Close) — Close a position (supports partial closes via the quantity field)
+- client.positions.close(positionCode: string, options?: Position.CloseOptions) — Close a position by its position code, returns Position.Full with P&L metrics
+  Options: waitForClose ("stream" | "poll") to wait for the position to disappear, timeout (ms, default 30000), pollInterval (ms, default 1000, poll mode only)
 - client.positions.closeAll() — Close all open positions with market orders
 - client.positions.stream(callback: (positions: Position.Full[]) => void) — Stream real-time position updates with live P&L (requires connect()). Returns unsubscribe function.
 

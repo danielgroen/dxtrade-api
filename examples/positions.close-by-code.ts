@@ -12,7 +12,7 @@ const client = new DxtradeClient({
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 (async () => {
-  await client.auth();
+  await client.connect();
 
   const suggestions = await client.symbols.search("ETHUSD");
   const symbol = suggestions[0];
@@ -29,28 +29,22 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     orderType: ORDER_TYPE.MARKET,
     instrumentId: symbol.id,
   });
-  console.log(`Order filled: ${order.orderId} — status: ${order.status}`);
+  console.log(`Order filled: ${order.orderId} — positionCode: ${order.positionCode}`);
 
-  // 2. Wait 2 seconds, then close the position
-  await sleep(2000);
-  console.log("\nClosing position...");
-  await client.positions.closeAll();
-  console.log("All positions closed");
+  // 2. Wait 3 seconds for P&L to update
+  console.log("\nWaiting 3 seconds...");
+  await sleep(3000);
 
-  // 3. Wait 2 seconds, then submit a limit order and immediately cancel it
-  await sleep(2000);
-  console.log("\nPlacing limit order...");
-  const limitOrder = await client.orders.submit({
-    symbol: symbol.name,
-    side: SIDE.BUY,
-    quantity: info.minVolume,
-    orderType: ORDER_TYPE.LIMIT,
-    price: 1.0,
-    instrumentId: symbol.id,
-  });
-  console.log(`Limit order placed: ${limitOrder.orderId} — status: ${limitOrder.status}`);
+  // 3. Close the position by its code and wait for confirmation via streaming
+  console.log("Closing position by code (waiting for close confirmation)...");
+  const position = await client.positions.close(order.positionCode!, { waitForClose: "stream" });
 
-  console.log("Cancelling order...");
-  await client.orders.cancelAll();
-  console.log("All orders cancelled");
+  console.log("\nPosition closed:");
+  console.log(`  P&L Open:      ${position.plOpen}`);
+  console.log(`  P&L Closed:    ${position.plClosed}`);
+  console.log(`  Commissions:   ${position.totalCommissions}`);
+  console.log(`  Financing:     ${position.totalFinancing}`);
+  console.log(`  Market Value:  ${position.marketValue}`);
+
+  client.disconnect();
 })().catch(console.error);

@@ -22,125 +22,228 @@ function mergePositionsWithMetrics(positions: Position.Get[], metrics: Position.
   });
 }
 
-export function streamPositions(ctx: ClientContext, callback: (positions: Position.Full[]) => void): () => void {
-  if (!ctx.wsManager) {
-    ctx.throwError(
-      ERROR.STREAM_REQUIRES_CONNECT,
-      "Streaming requires a persistent WebSocket. Use connect() instead of auth().",
-    );
-  }
+export class PositionsDomain {
+  constructor(private _ctx: ClientContext) {}
 
-  const emit = () => {
-    const positions = ctx.wsManager!.getCached<Position.Get[]>(WS_MESSAGE.POSITIONS);
-    const metrics = ctx.wsManager!.getCached<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS);
-    if (positions && metrics) {
-      callback(mergePositionsWithMetrics(positions, metrics));
+  /** Stream real-time position updates with P&L metrics. Requires connect(). Returns unsubscribe function. */
+  stream(callback: (positions: Position.Full[]) => void): () => void {
+    if (!this._ctx.wsManager) {
+      this._ctx.throwError(
+        ERROR.STREAM_REQUIRES_CONNECT,
+        "Streaming requires a persistent WebSocket. Use connect() instead of auth().",
+      );
     }
-  };
 
-  const onPositions = () => emit();
-  const onMetrics = () => emit();
+    const emit = () => {
+      const positions = this._ctx.wsManager!.getCached<Position.Get[]>(WS_MESSAGE.POSITIONS);
+      const metrics = this._ctx.wsManager!.getCached<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS);
+      if (positions && metrics) {
+        callback(mergePositionsWithMetrics(positions, metrics));
+      }
+    };
 
-  ctx.wsManager.on(WS_MESSAGE.POSITIONS, onPositions);
-  ctx.wsManager.on(WS_MESSAGE.POSITION_METRICS, onMetrics);
+    const onPositions = () => emit();
+    const onMetrics = () => emit();
 
-  emit();
+    this._ctx.wsManager.on(WS_MESSAGE.POSITIONS, onPositions);
+    this._ctx.wsManager.on(WS_MESSAGE.POSITION_METRICS, onMetrics);
 
-  return () => {
-    ctx.wsManager?.removeListener(WS_MESSAGE.POSITIONS, onPositions);
-    ctx.wsManager?.removeListener(WS_MESSAGE.POSITION_METRICS, onMetrics);
-  };
-}
+    emit();
 
-export async function getPositions(ctx: ClientContext): Promise<Position.Full[]> {
-  ctx.ensureSession();
-
-  if (ctx.wsManager) {
-    const [positions, metrics] = await Promise.all([
-      ctx.wsManager.waitFor<Position.Get[]>(WS_MESSAGE.POSITIONS),
-      ctx.wsManager.waitFor<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS),
-    ]);
-    return mergePositionsWithMetrics(positions, metrics);
+    return () => {
+      this._ctx.wsManager?.removeListener(WS_MESSAGE.POSITIONS, onPositions);
+      this._ctx.wsManager?.removeListener(WS_MESSAGE.POSITION_METRICS, onMetrics);
+    };
   }
 
-  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
-  const cookieStr = Cookies.serialize(ctx.cookies);
+  /** Get all open positions with P&L metrics merged. */
+  async get(): Promise<Position.Full[]> {
+    this._ctx.ensureSession();
 
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
-    let positions: Position.Get[] | null = null;
-    let metrics: Position.Metrics[] | null = null;
+    if (this._ctx.wsManager) {
+      const [positions, metrics] = await Promise.all([
+        this._ctx.wsManager.waitFor<Position.Get[]>(WS_MESSAGE.POSITIONS),
+        this._ctx.wsManager.waitFor<Position.Metrics[]>(WS_MESSAGE.POSITION_METRICS),
+      ]);
+      return mergePositionsWithMetrics(positions, metrics);
+    }
 
-    const timer = setTimeout(() => {
-      ws.close();
-      reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_TIMEOUT, "Account positions timed out"));
-    }, 30_000);
+    const wsUrl = endpoints.websocket(this._ctx.broker, this._ctx.atmosphereId);
+    const cookieStr = Cookies.serialize(this._ctx.cookies);
 
-    ws.on("message", (data) => {
-      const msg = parseWsData(data);
-      if (shouldLog(msg, ctx.debug)) debugLog(msg);
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieStr } });
+      let positions: Position.Get[] | null = null;
+      let metrics: Position.Metrics[] | null = null;
 
-      if (typeof msg === "string") return;
-      if (msg.type === WS_MESSAGE.POSITIONS) {
-        positions = msg.body as Position.Get[];
-      }
-      if (msg.type === WS_MESSAGE.POSITION_METRICS) {
-        metrics = msg.body as Position.Metrics[];
-      }
-      if (positions && metrics) {
+      const timer = setTimeout(() => {
+        ws.close();
+        reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_TIMEOUT, "Account positions timed out"));
+      }, 30_000);
+
+      ws.on("message", (data) => {
+        const msg = parseWsData(data);
+        if (shouldLog(msg, this._ctx.debug)) debugLog(msg);
+
+        if (typeof msg === "string") return;
+        if (msg.type === WS_MESSAGE.POSITIONS) {
+          positions = msg.body as Position.Get[];
+        }
+        if (msg.type === WS_MESSAGE.POSITION_METRICS) {
+          metrics = msg.body as Position.Metrics[];
+        }
+        if (positions && metrics) {
+          clearTimeout(timer);
+          ws.close();
+          resolve(mergePositionsWithMetrics(positions, metrics));
+        }
+      });
+
+      ws.on("error", (error) => {
         clearTimeout(timer);
         ws.close();
-        resolve(mergePositionsWithMetrics(positions, metrics));
-      }
+        reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_ERROR, `Account positions error: ${error.message}`));
+      });
     });
+  }
 
-    ws.on("error", (error) => {
-      clearTimeout(timer);
-      ws.close();
-      reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_ERROR, `Account positions error: ${error.message}`));
-    });
-  });
-}
+  /** Close all open positions with market orders. */
+  async closeAll(): Promise<void> {
+    const positions = await this.get();
 
-export async function closeAllPositions(ctx: ClientContext): Promise<void> {
-  const positions = await getPositions(ctx);
+    for (const pos of positions) {
+      const closeData: Position.Close = {
+        legs: [
+          {
+            instrumentId: pos.positionKey.instrumentId,
+            positionCode: pos.positionKey.positionCode,
+            positionEffect: "CLOSING",
+            ratioQuantity: 1,
+            symbol: pos.positionKey.positionCode,
+          },
+        ],
+        limitPrice: 0,
+        orderType: "MARKET",
+        quantity: -pos.quantity,
+        timeInForce: "GTC",
+      };
+      await this._sendCloseRequest(closeData);
+    }
+  }
 
-  for (const pos of positions) {
+  /** Close a position by its position code. Returns the position with P&L metrics. Optionally wait for close confirmation via `waitForClose: "stream" | "poll"`. */
+  async close(positionCode: string, options?: Position.CloseOptions): Promise<Position.Full> {
+    const positions = await this.get();
+    const position = positions.find((p) => p.positionKey.positionCode === positionCode);
+
+    if (!position) {
+      this._ctx.throwError(ERROR.POSITION_NOT_FOUND, `Position with code "${positionCode}" not found`);
+    }
+
     const closeData: Position.Close = {
       legs: [
         {
-          instrumentId: pos.positionKey.instrumentId,
-          positionCode: pos.positionKey.positionCode,
+          instrumentId: position.positionKey.instrumentId,
+          positionCode: position.positionKey.positionCode,
           positionEffect: "CLOSING",
           ratioQuantity: 1,
-          symbol: pos.positionKey.positionCode,
+          symbol: position.positionKey.positionCode,
         },
       ],
       limitPrice: 0,
       orderType: "MARKET",
-      quantity: -pos.quantity,
+      quantity: -position.quantity,
       timeInForce: "GTC",
     };
-    await closePosition(ctx, closeData);
-  }
-}
 
-export async function closePosition(ctx: ClientContext, data: Position.Close): Promise<void> {
-  try {
-    await retryRequest(
-      {
-        method: "POST",
-        url: endpoints.closePosition(ctx.broker),
-        data,
-        headers: authHeaders(ctx.csrf!, Cookies.serialize(ctx.cookies)),
-      },
-      ctx.retries,
-    );
-    // TODO:: Check response just like in order submit
-  } catch (error: unknown) {
-    if (error instanceof DxtradeError) throw error;
-    const message =
-      error instanceof Error ? ((error as any).response?.data?.message ?? error.message) : "Unknown error";
-    ctx.throwError(ERROR.POSITION_CLOSE_ERROR, `Position close error: ${message}`);
+    await this._sendCloseRequest(closeData);
+
+    if (options?.waitForClose === "stream") {
+      return this._waitForCloseStream(positionCode, position, options.timeout ?? 30_000);
+    }
+
+    if (options?.waitForClose === "poll") {
+      return this._waitForClosePoll(positionCode, position, options.timeout ?? 30_000, options.pollInterval ?? 1_000);
+    }
+
+    return position;
+  }
+
+  private _waitForCloseStream(
+    positionCode: string,
+    lastSnapshot: Position.Full,
+    timeout: number,
+  ): Promise<Position.Full> {
+    if (!this._ctx.wsManager) {
+      this._ctx.throwError(
+        ERROR.STREAM_REQUIRES_CONNECT,
+        'waitForClose: "stream" requires a persistent WebSocket. Use connect() instead of auth(), or use "poll" mode.',
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      let result = lastSnapshot;
+
+      const timer = setTimeout(() => {
+        unsubscribe();
+        reject(
+          new DxtradeError(ERROR.POSITION_CLOSE_TIMEOUT, `Position close confirmation timed out after ${timeout}ms`),
+        );
+      }, timeout);
+
+      const unsubscribe = this.stream((positions) => {
+        const match = positions.find((p) => p.positionKey.positionCode === positionCode);
+        if (match) {
+          result = match;
+        } else {
+          clearTimeout(timer);
+          unsubscribe();
+          resolve(result);
+        }
+      });
+    });
+  }
+
+  private async _waitForClosePoll(
+    positionCode: string,
+    lastSnapshot: Position.Full,
+    timeout: number,
+    interval: number,
+  ): Promise<Position.Full> {
+    const deadline = Date.now() + timeout;
+    let result = lastSnapshot;
+
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, interval));
+      const positions = await this.get();
+      const match = positions.find((p) => p.positionKey.positionCode === positionCode);
+      if (match) {
+        result = match;
+      } else {
+        return result;
+      }
+    }
+
+    this._ctx.throwError(ERROR.POSITION_CLOSE_TIMEOUT, `Position close confirmation timed out after ${timeout}ms`);
+  }
+
+  private async _sendCloseRequest(data: Position.Close): Promise<void> {
+    try {
+      await retryRequest(
+        {
+          method: "POST",
+          url: endpoints.closePosition(this._ctx.broker),
+          data,
+          headers: authHeaders(this._ctx.csrf!, Cookies.serialize(this._ctx.cookies)),
+        },
+        this._ctx.retries,
+      );
+      // TODO:: Check response just like in order submit
+    } catch (error: unknown) {
+      if (error instanceof DxtradeError) throw error;
+      const message =
+        error instanceof Error ? ((error as any).response?.data?.message ?? error.message) : "Unknown error";
+      this._ctx.throwError(ERROR.POSITION_CLOSE_ERROR, `Position close error: ${message}`);
+    }
   }
 }

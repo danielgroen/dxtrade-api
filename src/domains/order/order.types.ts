@@ -54,6 +54,7 @@ export namespace Order {
     orderId: string;
     status: string;
     statusDescription?: string;
+    positionCode?: string;
     [key: string]: unknown;
   }
 

@@ -154,12 +154,7 @@ export class SessionDomain {
     if (this._ctx.debug) clearDebugLog();
 
     const cookieStr = Cookies.serialize(this._ctx.cookies);
-    const handshake = await waitForHandshake(
-      endpoints.websocket(this._ctx.broker),
-      cookieStr,
-      30_000,
-      this._ctx.debug,
-    );
+    const handshake = await waitForHandshake(endpoints.websocket(this._ctx.broker), cookieStr, 30_000, this._ctx.debug);
     this._ctx.atmosphereId = handshake.atmosphereId;
     this._ctx.accountId = handshake.accountId;
 

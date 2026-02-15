@@ -1,8 +1,9 @@
 import WebSocket from "ws";
-import { WS_MESSAGE, ERROR, endpoints, DxtradeError } from "@/constants";
+import { WS_MESSAGE, ERROR, endpoints, DxtradeError, MESSAGE_CATEGORY, MESSAGE_TYPE, ORDER_STATUS } from "@/constants";
 import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Position } from ".";
+import type { Message } from "../order";
 
 function mergePositionsWithMetrics(positions: Position.Get[], metrics: Position.Metrics[]): Position.Full[] {
   const metricsMap = new Map(metrics.map((m) => [m.uid, m]));
@@ -156,11 +157,11 @@ export class PositionsDomain {
       timeInForce: "GTC",
     };
 
-    await this._sendCloseRequest(closeData);
-
     if (options?.waitForClose === "stream") {
-      return this._waitForCloseStream(positionCode, position, options.timeout ?? 30_000);
+      return this._waitForCloseStream(positionCode, position, closeData, options.timeout ?? 30_000);
     }
+
+    await this._sendCloseRequest(closeData);
 
     if (options?.waitForClose === "poll") {
       return this._waitForClosePoll(positionCode, position, options.timeout ?? 30_000, options.pollInterval ?? 1_000);
@@ -172,6 +173,7 @@ export class PositionsDomain {
   private _waitForCloseStream(
     positionCode: string,
     lastSnapshot: Position.Full,
+    closeData: Position.Close,
     timeout: number,
   ): Promise<Position.Full> {
     if (!this._ctx.wsManager) {
@@ -181,26 +183,93 @@ export class PositionsDomain {
       );
     }
 
-    return new Promise((resolve, reject) => {
-      let result = lastSnapshot;
+    return new Promise(async (resolve, reject) => {
+      let settled = false;
+      const result = lastSnapshot;
 
       const timer = setTimeout(() => {
-        unsubscribe();
+        if (settled) return;
+        settled = true;
+        cleanup();
         reject(
           new DxtradeError(ERROR.POSITION_CLOSE_TIMEOUT, `Position close confirmation timed out after ${timeout}ms`),
         );
       }, timeout);
 
-      const unsubscribe = this.stream((positions) => {
-        const match = positions.find((p) => p.positionKey.positionCode === positionCode);
-        if (match) {
-          result = match;
-        } else {
-          clearTimeout(timer);
-          unsubscribe();
-          resolve(result);
+      function done(err: Error | null, res?: Position.Full) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        cleanup();
+        if (err) reject(err);
+        else resolve(res!);
+      }
+
+      // Listen for close order FILLED via MESSAGE (trade log)
+      function onMessage(body: unknown) {
+        const messages = body as Message.Entry[];
+        const orderMsg = messages?.findLast?.(
+          (m) =>
+            m.messageCategory === MESSAGE_CATEGORY.TRADE_LOG &&
+            m.messageType === MESSAGE_TYPE.ORDER &&
+            !m.historyMessage,
+        );
+        if (!orderMsg) return;
+
+        const params = orderMsg.parametersTO as Message.OrderParams;
+        if (params.positionCode !== positionCode) return;
+
+        if (params.orderStatus === ORDER_STATUS.REJECTED) {
+          done(
+            new DxtradeError(
+              ERROR.POSITION_CLOSE_ERROR,
+              `Close order rejected: ${params.rejectReason?.key ?? "Unknown reason"}`,
+            ),
+          );
+        } else if (params.orderStatus === ORDER_STATUS.FILLED) {
+          done(null, result);
         }
-      });
+      }
+
+      // Listen for close order FILLED via ORDERS
+      function onOrders(body: unknown) {
+        const orders = body as {
+          orderId: string;
+          status: string;
+          statusDescription?: string;
+          [key: string]: unknown;
+        }[];
+        const order = orders?.[0];
+        if (!order?.orderId) return;
+
+        if (order.status === ORDER_STATUS.REJECTED) {
+          done(
+            new DxtradeError(
+              ERROR.POSITION_CLOSE_ERROR,
+              `Close order rejected: ${order.statusDescription ?? "Unknown reason"}`,
+            ),
+          );
+        } else if (order.status === ORDER_STATUS.FILLED) {
+          done(null, result);
+        }
+      }
+
+      const wsManager = this._ctx.wsManager!;
+
+      function cleanup() {
+        wsManager.removeListener(WS_MESSAGE.MESSAGE, onMessage);
+        wsManager.removeListener(WS_MESSAGE.ORDERS, onOrders);
+      }
+
+      // Subscribe BEFORE sending the close request to avoid race condition
+      wsManager.on(WS_MESSAGE.MESSAGE, onMessage);
+      wsManager.on(WS_MESSAGE.ORDERS, onOrders);
+
+      try {
+        await this._sendCloseRequest(closeData);
+      } catch (error) {
+        done(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 

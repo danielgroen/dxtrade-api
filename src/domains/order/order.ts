@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import WebSocket from "ws";
 import { endpoints, ORDER_TYPE, SIDE, ACTION, DxtradeError, ERROR } from "@/constants";
-import { WS_MESSAGE } from "@/constants/enums";
+import { WS_MESSAGE, MESSAGE_CATEGORY, MESSAGE_TYPE, ORDER_STATUS } from "@/constants/enums";
 import { Cookies, authHeaders, retryRequest, parseWsData, shouldLog, debugLog } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import { SymbolsDomain } from "../symbol/symbol";
@@ -46,15 +46,18 @@ function createOrderListener(
       if (msg.type === WS_MESSAGE.MESSAGE) {
         const messages = msg.body as Message.Entry[];
         const orderMsg = messages?.findLast?.(
-          (m) => m.messageCategory === "TRADE_LOG" && m.messageType === "ORDER" && !m.historyMessage,
+          (m) =>
+            m.messageCategory === MESSAGE_CATEGORY.TRADE_LOG &&
+            m.messageType === MESSAGE_TYPE.ORDER &&
+            !m.historyMessage,
         );
         if (!orderMsg) return;
 
         const params = orderMsg.parametersTO as Message.OrderParams;
-        if (params.orderStatus === "REJECTED") {
+        if (params.orderStatus === ORDER_STATUS.REJECTED) {
           const reason = params.rejectReason?.key ?? "Unknown reason";
           done(new Error(`[dxtrade-api] Order rejected: ${reason}`));
-        } else if (params.orderStatus === "FILLED") {
+        } else if (params.orderStatus === ORDER_STATUS.FILLED) {
           done(null, {
             orderId: params.orderKey,
             status: params.orderStatus,
@@ -72,9 +75,9 @@ function createOrderListener(
         const body = (msg.body as Order.Update[])?.[0];
         if (!body?.orderId) return;
 
-        if (body.status === "REJECTED") {
+        if (body.status === ORDER_STATUS.REJECTED) {
           done(new Error(`[dxtrade-api] Order rejected: ${body.statusDescription ?? "Unknown reason"}`));
-        } else if (body.status === "FILLED") {
+        } else if (body.status === ORDER_STATUS.FILLED) {
           done(null, body);
         }
       }
@@ -115,15 +118,16 @@ function createWsManagerOrderListener(ctx: ClientContext, timeout = 30_000): Pro
     function onMessage(body: unknown) {
       const messages = body as Message.Entry[];
       const orderMsg = messages?.findLast?.(
-        (m) => m.messageCategory === "TRADE_LOG" && m.messageType === "ORDER" && !m.historyMessage,
+        (m) =>
+          m.messageCategory === MESSAGE_CATEGORY.TRADE_LOG && m.messageType === MESSAGE_TYPE.ORDER && !m.historyMessage,
       );
       if (!orderMsg) return;
 
       const params = orderMsg.parametersTO as Message.OrderParams;
-      if (params.orderStatus === "REJECTED") {
+      if (params.orderStatus === ORDER_STATUS.REJECTED) {
         const reason = params.rejectReason?.key ?? "Unknown reason";
         done(new Error(`[dxtrade-api] Order rejected: ${reason}`));
-      } else if (params.orderStatus === "FILLED") {
+      } else if (params.orderStatus === ORDER_STATUS.FILLED) {
         done(null, {
           orderId: params.orderKey,
           status: params.orderStatus,
@@ -139,9 +143,9 @@ function createWsManagerOrderListener(ctx: ClientContext, timeout = 30_000): Pro
       const order = (body as Order.Update[])?.[0];
       if (!order?.orderId) return;
 
-      if (order.status === "REJECTED") {
+      if (order.status === ORDER_STATUS.REJECTED) {
         done(new Error(`[dxtrade-api] Order rejected: ${order.statusDescription ?? "Unknown reason"}`));
-      } else if (order.status === "FILLED") {
+      } else if (order.status === ORDER_STATUS.FILLED) {
         done(null, order);
       }
     }

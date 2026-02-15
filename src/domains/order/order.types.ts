@@ -1,4 +1,4 @@
-import type { ORDER_TYPE, SIDE, ACTION, TIF } from "@/constants/enums";
+import type { ORDER_TYPE, SIDE, ACTION, TIF, MESSAGE_CATEGORY, MESSAGE_TYPE, ORDER_STATUS } from "@/constants/enums";
 
 export namespace Order {
   export interface Get {
@@ -129,7 +129,7 @@ export namespace Message {
     symbol: string;
     orderType: string;
     orderSide: string;
-    orderStatus: "PLACED" | "FILLED" | "REJECTED";
+    orderStatus: ORDER_STATUS;
     quantity: number;
     remainingQuantity: number;
     filledQuantity: number | string;
@@ -159,8 +159,8 @@ export namespace Message {
   export interface Entry {
     principalLogin: string | null;
     accountId: string | null;
-    messageCategory: "TRADE_LOG" | "NOTIFICATION";
-    messageType: "ORDER" | "INSTRUMENT_ACTIVATED";
+    messageCategory: MESSAGE_CATEGORY;
+    messageType: MESSAGE_TYPE;
     historyMessage: boolean;
     triggeredBeforeLogin: boolean;
     critical: boolean;

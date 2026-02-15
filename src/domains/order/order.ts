@@ -258,7 +258,7 @@ export class OrdersDomain {
       metadata,
     } = params;
     const info = await new SymbolsDomain(this._ctx).info(symbol);
-    const units = Math.round(quantity * info.lotSize);
+    const units = quantity * info.lotSize;
     const qty = side === SIDE.BUY ? units : -units;
     const priceParam = orderType === ORDER_TYPE.STOP ? "stopPrice" : "limitPrice";
 
@@ -282,7 +282,7 @@ export class OrdersDomain {
       ...(metadata != null && { metadata }),
     };
 
-    if (price != null && orderType !== ORDER_TYPE.MARKET) {
+    if (price != null) {
       orderData[priceParam] = price;
     }
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import { WS_MESSAGE } from "@/constants/enums";
 import { DxtradeError } from "@/constants/errors";
-import { streamOHLC } from "@/domains/ohlc";
+import { OhlcDomain } from "@/domains/ohlc";
 import { createMockContext } from "./helpers";
 import type { WsManager } from "@/utils/ws-manager";
 
@@ -49,13 +49,14 @@ function emitChartFeed(wsManager: WsManager, body: Record<string, unknown>) {
 
 // --- Tests ---
 
-describe("streamOHLC", () => {
+describe("OhlcDomain.stream", () => {
   it("should emit snapshot bars after snapshotEnd", async () => {
     const wsManager = createMockWsManager();
     const ctx = createMockContext({ wsManager });
+    const ohlc = new OhlcDomain(ctx);
     const callback = vi.fn();
 
-    const promise = streamOHLC(ctx, { symbol: "EURUSD" }, callback);
+    const promise = ohlc.stream({ symbol: "EURUSD" }, callback);
 
     // Simulate snapshot data arriving
     emitChartFeed(wsManager, {
@@ -81,9 +82,10 @@ describe("streamOHLC", () => {
   it("should emit live bar updates after snapshot", async () => {
     const wsManager = createMockWsManager();
     const ctx = createMockContext({ wsManager });
+    const ohlc = new OhlcDomain(ctx);
     const callback = vi.fn();
 
-    const promise = streamOHLC(ctx, { symbol: "EURUSD" }, callback);
+    const promise = ohlc.stream({ symbol: "EURUSD" }, callback);
 
     // Complete snapshot
     emitChartFeed(wsManager, {
@@ -108,9 +110,10 @@ describe("streamOHLC", () => {
   it("should stop receiving updates after unsubscribe", async () => {
     const wsManager = createMockWsManager();
     const ctx = createMockContext({ wsManager });
+    const ohlc = new OhlcDomain(ctx);
     const callback = vi.fn();
 
-    const promise = streamOHLC(ctx, { symbol: "EURUSD" }, callback);
+    const promise = ohlc.stream({ symbol: "EURUSD" }, callback);
 
     emitChartFeed(wsManager, {
       subtopic: WS_MESSAGE.SUBTOPIC.OHLC_STREAM,
@@ -133,17 +136,19 @@ describe("streamOHLC", () => {
 
   it("should throw STREAM_REQUIRES_CONNECT when wsManager is null", async () => {
     const ctx = createMockContext({ wsManager: null });
+    const ohlc = new OhlcDomain(ctx);
 
-    await expect(streamOHLC(ctx, { symbol: "EURUSD" }, vi.fn())).rejects.toThrow(DxtradeError);
-    await expect(streamOHLC(ctx, { symbol: "EURUSD" }, vi.fn())).rejects.toThrow("connect()");
+    await expect(ohlc.stream({ symbol: "EURUSD" }, vi.fn())).rejects.toThrow(DxtradeError);
+    await expect(ohlc.stream({ symbol: "EURUSD" }, vi.fn())).rejects.toThrow("connect()");
   });
 
   it("should ignore messages with different subtopic", async () => {
     const wsManager = createMockWsManager();
     const ctx = createMockContext({ wsManager });
+    const ohlc = new OhlcDomain(ctx);
     const callback = vi.fn();
 
-    const promise = streamOHLC(ctx, { symbol: "EURUSD" }, callback);
+    const promise = ohlc.stream({ symbol: "EURUSD" }, callback);
 
     // Emit message with wrong subtopic — should be ignored
     emitChartFeed(wsManager, {
@@ -168,9 +173,10 @@ describe("streamOHLC", () => {
   it("should accumulate bars across multiple messages before snapshotEnd", async () => {
     const wsManager = createMockWsManager();
     const ctx = createMockContext({ wsManager });
+    const ohlc = new OhlcDomain(ctx);
     const callback = vi.fn();
 
-    const promise = streamOHLC(ctx, { symbol: "EURUSD" }, callback);
+    const promise = ohlc.stream({ symbol: "EURUSD" }, callback);
 
     // First batch
     emitChartFeed(wsManager, {

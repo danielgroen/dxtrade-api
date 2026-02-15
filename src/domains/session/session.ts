@@ -3,6 +3,7 @@ import { endpoints, DxtradeError, ERROR } from "@/constants";
 import {
   Cookies,
   WsManager,
+  baseHeaders,
   authHeaders,
   cookieOnlyHeaders,
   retryRequest,
@@ -11,6 +12,7 @@ import {
   parseWsData,
   shouldLog,
   debugLog,
+  checkWsRateLimit,
 } from "@/utils";
 import type { ClientContext } from "@/client.types";
 
@@ -53,130 +55,170 @@ function waitForHandshake(
     ws.on("error", (error) => {
       clearTimeout(timer);
       ws.close();
+      checkWsRateLimit(error);
       reject(new Error(`[dxtrade-api] WebSocket handshake error: ${error.message}`));
     });
   });
 }
 
-export async function login(ctx: ClientContext): Promise<void> {
-  try {
-    const response = await retryRequest(
-      {
-        method: "POST",
-        url: endpoints.login(ctx.broker),
-        data: {
-          username: ctx.config.username,
-          password: ctx.config.password,
+export class SessionDomain {
+  constructor(private _ctx: ClientContext) {}
 
-          // TODO:: take a look at this below, domain nor vendor seems required. it works if i comment out both.
-          // however i still use it since i see brokers use it as well in the login endpoint.
+  /** Authenticate with the broker using username and password. */
+  async login(): Promise<void> {
+    try {
+      const response = await retryRequest(
+        {
+          method: "POST",
+          url: endpoints.login(this._ctx.broker),
+          data: {
+            username: this._ctx.config.username,
+            password: this._ctx.config.password,
 
-          // domain: ctx.config.broker,
-          vendor: ctx.config.broker,
+            // TODO:: take a look at this below, domain nor vendor seems required. it works if i comment out both.
+            // however i still use it since i see brokers use it as well in the login endpoint.
 
-          // END TODO::
+            // domain: this._ctx.config.broker,
+            vendor: this._ctx.config.broker,
+
+            // END TODO::
+          },
+          headers: {
+            ...baseHeaders(),
+            Origin: this._ctx.broker,
+            Referer: this._ctx.broker + "/",
+            Cookie: Cookies.serialize(this._ctx.cookies),
+          },
         },
-        headers: { "Content-Type": "application/json" },
-      },
-      ctx.retries,
-    );
+        this._ctx.retries,
+      );
 
-    if (response.status === 200) {
+      if (response.status === 200) {
+        const setCookies = response.headers["set-cookie"] ?? [];
+        const incoming = Cookies.parse(setCookies);
+        this._ctx.cookies = Cookies.merge(this._ctx.cookies, incoming);
+        this._ctx.callbacks.onLogin?.();
+      } else {
+        this._ctx.throwError(ERROR.LOGIN_FAILED, `Login failed: ${response.status}`);
+      }
+    } catch (error: unknown) {
+      if (error instanceof DxtradeError) throw error;
+      const message = error instanceof Error ? error.message : "Unknown error";
+      this._ctx.throwError(ERROR.LOGIN_ERROR, `Login error: ${message}`);
+    }
+  }
+
+  /** Fetch the CSRF token required for authenticated requests. */
+  async fetchCsrf(): Promise<void> {
+    try {
+      const cookieStr = Cookies.serialize(this._ctx.cookies);
+      const response = await retryRequest(
+        {
+          method: "GET",
+          url: this._ctx.broker,
+          headers: { ...cookieOnlyHeaders(cookieStr), Referer: this._ctx.broker },
+        },
+        this._ctx.retries,
+      );
+
       const setCookies = response.headers["set-cookie"] ?? [];
       const incoming = Cookies.parse(setCookies);
-      ctx.cookies = Cookies.merge(ctx.cookies, incoming);
-      ctx.callbacks.onLogin?.();
-    } else {
-      ctx.throwError(ERROR.LOGIN_FAILED, `Login failed: ${response.status}`);
+      this._ctx.cookies = Cookies.merge(this._ctx.cookies, incoming);
+
+      const csrfMatch = response.data?.match(/name="csrf" content="([^"]+)"/);
+      if (csrfMatch) {
+        this._ctx.csrf = csrfMatch[1];
+      } else {
+        this._ctx.throwError(ERROR.CSRF_NOT_FOUND, "CSRF token not found");
+      }
+    } catch (error: unknown) {
+      if (error instanceof DxtradeError) throw error;
+      const message = error instanceof Error ? error.message : "Unknown error";
+      this._ctx.throwError(ERROR.CSRF_ERROR, `CSRF fetch error: ${message}`);
     }
-  } catch (error: unknown) {
-    if (error instanceof DxtradeError) throw error;
-    const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError(ERROR.LOGIN_ERROR, `Login error: ${message}`);
   }
-}
 
-export async function fetchCsrf(ctx: ClientContext): Promise<void> {
-  try {
-    const cookieStr = Cookies.serialize(ctx.cookies);
-    const response = await retryRequest(
-      {
-        method: "GET",
-        url: ctx.broker,
-        headers: { ...cookieOnlyHeaders(cookieStr), Referer: ctx.broker },
-      },
-      ctx.retries,
-    );
+  /** Switch to a specific trading account by ID. */
+  async switchAccount(accountId: string): Promise<void> {
+    this._ctx.ensureSession();
 
-    const csrfMatch = response.data?.match(/name="csrf" content="([^"]+)"/);
-    if (csrfMatch) {
-      ctx.csrf = csrfMatch[1];
-    } else {
-      ctx.throwError(ERROR.CSRF_NOT_FOUND, "CSRF token not found");
+    try {
+      await retryRequest(
+        {
+          method: "POST",
+          url: endpoints.switchAccount(this._ctx.broker, accountId),
+          headers: authHeaders(this._ctx.csrf!, Cookies.serialize(this._ctx.cookies)),
+        },
+        this._ctx.retries,
+      );
+      this._ctx.callbacks.onAccountSwitch?.(accountId);
+    } catch (error: unknown) {
+      if (error instanceof DxtradeError) throw error;
+      const message = error instanceof Error ? error.message : "Unknown error";
+      this._ctx.throwError(ERROR.ACCOUNT_SWITCH_ERROR, `Error switching account: ${message}`);
     }
-  } catch (error: unknown) {
-    if (error instanceof DxtradeError) throw error;
-    const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError(ERROR.CSRF_ERROR, `CSRF fetch error: ${message}`);
   }
-}
 
-export async function switchAccount(ctx: ClientContext, accountId: string): Promise<void> {
-  ctx.ensureSession();
-
-  try {
-    await retryRequest(
-      {
-        method: "POST",
-        url: endpoints.switchAccount(ctx.broker, accountId),
-        headers: authHeaders(ctx.csrf!, Cookies.serialize(ctx.cookies)),
-      },
-      ctx.retries,
-    );
-    ctx.callbacks.onAccountSwitch?.(accountId);
-  } catch (error: unknown) {
-    if (error instanceof DxtradeError) throw error;
-    const message = error instanceof Error ? error.message : "Unknown error";
-    ctx.throwError(ERROR.ACCOUNT_SWITCH_ERROR, `Error switching account: ${message}`);
+  /** Hit the broker page to collect Cloudflare cookies before making API calls. */
+  private async _preflight(): Promise<void> {
+    try {
+      const response = await retryRequest(
+        {
+          method: "GET",
+          url: this._ctx.broker,
+          headers: { ...baseHeaders(), Referer: this._ctx.broker },
+        },
+        this._ctx.retries,
+      );
+      const setCookies = response.headers["set-cookie"] ?? [];
+      const incoming = Cookies.parse(setCookies);
+      this._ctx.cookies = Cookies.merge(this._ctx.cookies, incoming);
+    } catch {
+      // Non-fatal: continue with login even if preflight fails
+    }
   }
-}
 
-export async function auth(ctx: ClientContext): Promise<void> {
-  await login(ctx);
-  await fetchCsrf(ctx);
-  if (ctx.debug) clearDebugLog();
+  /** Authenticate and establish a session: login, fetch CSRF, WebSocket handshake, and optional account switch. */
+  async auth(): Promise<void> {
+    await this._preflight();
+    await this.login();
+    await this.fetchCsrf();
+    if (this._ctx.debug) clearDebugLog();
 
-  const cookieStr = Cookies.serialize(ctx.cookies);
-  const handshake = await waitForHandshake(endpoints.websocket(ctx.broker), cookieStr, 30_000, ctx.debug);
-  ctx.atmosphereId = handshake.atmosphereId;
-  ctx.accountId = handshake.accountId;
+    const cookieStr = Cookies.serialize(this._ctx.cookies);
+    const handshake = await waitForHandshake(endpoints.websocket(this._ctx.broker), cookieStr, 30_000, this._ctx.debug);
+    this._ctx.atmosphereId = handshake.atmosphereId;
+    this._ctx.accountId = handshake.accountId;
 
-  if (ctx.config.accountId) {
-    await switchAccount(ctx, ctx.config.accountId);
-    const reconnect = await waitForHandshake(
-      endpoints.websocket(ctx.broker, ctx.atmosphereId),
-      Cookies.serialize(ctx.cookies),
-      30_000,
-      ctx.debug,
-    );
-    ctx.atmosphereId = reconnect.atmosphereId;
-    ctx.accountId = reconnect.accountId;
+    if (this._ctx.config.accountId) {
+      await this.switchAccount(this._ctx.config.accountId);
+      const reconnect = await waitForHandshake(
+        endpoints.websocket(this._ctx.broker, this._ctx.atmosphereId),
+        Cookies.serialize(this._ctx.cookies),
+        30_000,
+        this._ctx.debug,
+      );
+      this._ctx.atmosphereId = reconnect.atmosphereId;
+      this._ctx.accountId = reconnect.accountId;
+    }
   }
-}
 
-export async function connect(ctx: ClientContext): Promise<void> {
-  await auth(ctx);
+  /** Connect to the broker with a persistent WebSocket: auth + persistent WS for data reuse and streaming. */
+  async connect(): Promise<void> {
+    await this.auth();
 
-  const wsManager = new WsManager();
-  const wsUrl = endpoints.websocket(ctx.broker, ctx.atmosphereId);
-  const cookieStr = Cookies.serialize(ctx.cookies);
-  await wsManager.connect(wsUrl, cookieStr, ctx.debug);
-  ctx.wsManager = wsManager;
-}
+    const wsManager = new WsManager();
+    const wsUrl = endpoints.websocket(this._ctx.broker, this._ctx.atmosphereId);
+    const cookieStr = Cookies.serialize(this._ctx.cookies);
+    await wsManager.connect(wsUrl, cookieStr, this._ctx.debug);
+    this._ctx.wsManager = wsManager;
+  }
 
-export function disconnect(ctx: ClientContext): void {
-  if (ctx.wsManager) {
-    ctx.wsManager.close();
-    ctx.wsManager = null;
+  /** Close the persistent WebSocket connection. */
+  disconnect(): void {
+    if (this._ctx.wsManager) {
+      this._ctx.wsManager.close();
+      this._ctx.wsManager = null;
+    }
   }
 }

@@ -11,23 +11,17 @@ const client = new DxtradeClient({
 
 (async () => {
   await client.auth();
-  // TODO:: improve parameters! maybe even have a "closeWholePosition" function
 
-  const positions = await client.positions.close({
-    legs: [
-      {
-        instrumentId: 3438,
-        positionCode: "191361108",
-        positionEffect: "CLOSING",
-        ratioQuantity: 1,
-        symbol: "EURUSD",
-      },
-    ],
-    limitPrice: 1.18725,
-    orderType: "MARKET",
-    quantity: -1000,
-    timeInForce: "GTC",
-  });
+  const positions = await client.positions.get();
+  if (positions.length === 0) {
+    console.log("No open positions to close");
+    return;
+  }
 
-  console.log("Positions: ", positions);
+  const position = positions[0];
+  const code = position.positionKey.positionCode;
+  console.log(`Closing position ${code}...`);
+
+  const closed = await client.positions.close(code);
+  console.log("Position closed:", closed);
 })().catch(console.error);

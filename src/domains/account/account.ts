@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { WS_MESSAGE, ERROR, endpoints, DxtradeError } from "@/constants";
-import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders, authHeaders } from "@/utils";
+import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders, authHeaders, checkWsRateLimit } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Account } from ".";
 
@@ -46,6 +46,7 @@ export class AccountDomain {
       ws.on("error", (error) => {
         clearTimeout(timer);
         ws.close();
+        checkWsRateLimit(error);
         reject(new DxtradeError(ERROR.ACCOUNT_METRICS_ERROR, `Account metrics error: ${error.message}`));
       });
     });

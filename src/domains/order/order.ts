@@ -2,7 +2,7 @@ import crypto from "crypto";
 import WebSocket from "ws";
 import { endpoints, ORDER_TYPE, SIDE, ACTION, DxtradeError, ERROR } from "@/constants";
 import { WS_MESSAGE, MESSAGE_CATEGORY, MESSAGE_TYPE, ORDER_STATUS } from "@/constants/enums";
-import { Cookies, authHeaders, retryRequest, parseWsData, shouldLog, debugLog } from "@/utils";
+import { Cookies, authHeaders, retryRequest, parseWsData, shouldLog, debugLog, checkWsRateLimit } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import { SymbolsDomain } from "../symbol/symbol";
 import type { Order, Message } from ".";
@@ -88,7 +88,8 @@ function createOrderListener(
       settled = true;
       clearTimeout(timer);
       ws.close();
-      reject(new Error(`[dxtrade-api] WebSocket order listener error: ${error.message}`));
+      checkWsRateLimit(error);
+      reject(new DxtradeError(ERROR.ORDER_ERROR, `WebSocket order listener error: ${error.message}`));
     });
   });
 
@@ -197,6 +198,7 @@ export class OrdersDomain {
       ws.on("error", (error) => {
         clearTimeout(timer);
         ws.close();
+        checkWsRateLimit(error);
         reject(new DxtradeError(ERROR.ORDERS_ERROR, `Orders error: ${error.message}`));
       });
     });

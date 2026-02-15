@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { endpoints, DxtradeError, WS_MESSAGE, ERROR } from "@/constants";
-import { Cookies, parseWsData, shouldLog, debugLog } from "@/utils";
+import { Cookies, parseWsData, shouldLog, debugLog, checkWsRateLimit } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Instrument } from ".";
 
@@ -55,6 +55,7 @@ export class InstrumentsDomain {
       ws.on("error", (error) => {
         clearTimeout(timer);
         ws.close();
+        checkWsRateLimit(error);
         reject(new DxtradeError(ERROR.INSTRUMENTS_ERROR, `Instruments error: ${error.message}`));
       });
     });

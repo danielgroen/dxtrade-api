@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { endpoints, DxtradeError, WS_MESSAGE, ERROR } from "@/constants";
-import { Cookies, authHeaders, retryRequest, parseWsData, shouldLog, debugLog } from "@/utils";
+import { Cookies, authHeaders, retryRequest, parseWsData, shouldLog, debugLog, checkWsRateLimit } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { OHLC } from ".";
 
@@ -219,6 +219,7 @@ export class OhlcDomain {
 
       ws.on("error", (error) => {
         cleanup();
+        checkWsRateLimit(error);
         reject(new DxtradeError(ERROR.OHLC_ERROR, `OHLC WebSocket error: ${error.message}`));
       });
     });

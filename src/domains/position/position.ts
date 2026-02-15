@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { WS_MESSAGE, ERROR, endpoints, DxtradeError, MESSAGE_CATEGORY, MESSAGE_TYPE, ORDER_STATUS } from "@/constants";
-import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders } from "@/utils";
+import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, authHeaders, checkWsRateLimit } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Position } from ".";
 import type { Message } from "../order";
@@ -103,6 +103,7 @@ export class PositionsDomain {
       ws.on("error", (error) => {
         clearTimeout(timer);
         ws.close();
+        checkWsRateLimit(error);
         reject(new DxtradeError(ERROR.ACCOUNT_POSITIONS_ERROR, `Account positions error: ${error.message}`));
       });
     });

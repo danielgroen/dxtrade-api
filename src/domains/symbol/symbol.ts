@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { endpoints, DxtradeError, WS_MESSAGE, ERROR } from "@/constants";
-import { Cookies, baseHeaders, retryRequest, parseWsData, shouldLog, debugLog } from "@/utils";
+import { Cookies, baseHeaders, retryRequest, parseWsData, shouldLog, debugLog, checkWsRateLimit } from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Symbol } from ".";
 
@@ -102,6 +102,7 @@ export class SymbolsDomain {
       ws.on("error", (error) => {
         clearTimeout(timer);
         ws.close();
+        checkWsRateLimit(error);
         reject(new DxtradeError(ERROR.LIMITS_ERROR, `Symbol limits error: ${error.message}`));
       });
     });

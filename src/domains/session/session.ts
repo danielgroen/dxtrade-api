@@ -3,6 +3,7 @@ import { endpoints, DxtradeError, ERROR } from "@/constants";
 import {
   Cookies,
   WsManager,
+  baseHeaders,
   authHeaders,
   cookieOnlyHeaders,
   retryRequest,
@@ -11,6 +12,7 @@ import {
   parseWsData,
   shouldLog,
   debugLog,
+  checkWsRateLimit,
 } from "@/utils";
 import type { ClientContext } from "@/client.types";
 
@@ -53,6 +55,7 @@ function waitForHandshake(
     ws.on("error", (error) => {
       clearTimeout(timer);
       ws.close();
+      checkWsRateLimit(error);
       reject(new Error(`[dxtrade-api] WebSocket handshake error: ${error.message}`));
     });
   });
@@ -80,7 +83,12 @@ export class SessionDomain {
 
             // END TODO::
           },
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            ...baseHeaders(),
+            Origin: this._ctx.broker,
+            Referer: this._ctx.broker + "/",
+            Cookie: Cookies.serialize(this._ctx.cookies),
+          },
         },
         this._ctx.retries,
       );
@@ -112,6 +120,10 @@ export class SessionDomain {
         },
         this._ctx.retries,
       );
+
+      const setCookies = response.headers["set-cookie"] ?? [];
+      const incoming = Cookies.parse(setCookies);
+      this._ctx.cookies = Cookies.merge(this._ctx.cookies, incoming);
 
       const csrfMatch = response.data?.match(/name="csrf" content="([^"]+)"/);
       if (csrfMatch) {
@@ -147,8 +159,28 @@ export class SessionDomain {
     }
   }
 
+  /** Hit the broker page to collect Cloudflare cookies before making API calls. */
+  private async _preflight(): Promise<void> {
+    try {
+      const response = await retryRequest(
+        {
+          method: "GET",
+          url: this._ctx.broker,
+          headers: { ...baseHeaders(), Referer: this._ctx.broker },
+        },
+        this._ctx.retries,
+      );
+      const setCookies = response.headers["set-cookie"] ?? [];
+      const incoming = Cookies.parse(setCookies);
+      this._ctx.cookies = Cookies.merge(this._ctx.cookies, incoming);
+    } catch {
+      // Non-fatal: continue with login even if preflight fails
+    }
+  }
+
   /** Authenticate and establish a session: login, fetch CSRF, WebSocket handshake, and optional account switch. */
   async auth(): Promise<void> {
+    await this._preflight();
     await this.login();
     await this.fetchCsrf();
     if (this._ctx.debug) clearDebugLog();

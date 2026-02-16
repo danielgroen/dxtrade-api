@@ -1,6 +1,15 @@
 import WebSocket from "ws";
 import { WS_MESSAGE, ERROR, endpoints, DxtradeError } from "@/constants";
-import { Cookies, parseWsData, shouldLog, debugLog, retryRequest, baseHeaders, authHeaders, checkWsRateLimit } from "@/utils";
+import {
+  Cookies,
+  parseWsData,
+  shouldLog,
+  debugLog,
+  retryRequest,
+  baseHeaders,
+  authHeaders,
+  checkWsRateLimit,
+} from "@/utils";
 import type { ClientContext } from "@/client.types";
 import type { Account } from ".";
 

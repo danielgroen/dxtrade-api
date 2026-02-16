@@ -4,7 +4,7 @@ import { DxtradeError, ERROR } from "@/constants";
 export async function retryRequest(config: AxiosRequestConfig, retries = 3): Promise<AxiosResponse> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      return await axios({ ...config, maxRedirects: 0 });
+      return await axios(config);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       console.warn(`[dxtrade-api] Attempt ${attempt} failed: ${message}`, config.url);

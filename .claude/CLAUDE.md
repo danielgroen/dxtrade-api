@@ -106,6 +106,9 @@ The fix: `connect()` captures the tracking ID from the handshake and stores it i
 - **Error codes**: Always use the `ERROR` enum from `@/constants` — never use raw strings for error codes (e.g. `ERROR.OHLC_TIMEOUT`, not `"OHLC_TIMEOUT"`)
 - **WebSocket message types**: Always use the `WS_MESSAGE` enum — never use raw strings (e.g. `WS_MESSAGE.POSITIONS`, not `"POSITIONS"`)
 - **WebSocket subtopics**: Use `WS_MESSAGE.SUBTOPIC` namespace (e.g. `WS_MESSAGE.SUBTOPIC.BIG_CHART_COMPONENT`)
+- **Message categories**: Always use `MESSAGE_CATEGORY` enum — never use raw strings (e.g. `MESSAGE_CATEGORY.TRADE_LOG`, not `"TRADE_LOG"`)
+- **Message types**: Always use `MESSAGE_TYPE` enum — never use raw strings (e.g. `MESSAGE_TYPE.ORDER`, not `"ORDER"`)
+- **Order statuses**: Always use `ORDER_STATUS` enum — never use raw strings (e.g. `ORDER_STATUS.FILLED`, not `"FILLED"`)
 - When adding a new error code, WebSocket message type, or subtopic, add it to `src/constants/enums.ts`
 
 ### General:

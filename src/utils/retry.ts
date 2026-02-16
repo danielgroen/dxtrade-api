@@ -8,9 +8,15 @@ export async function retryRequest(config: AxiosRequestConfig, retries = 3): Pro
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       console.warn(`[dxtrade-api] Attempt ${attempt} failed: ${message}`, config.url);
+
       if (isAxiosError(error) && error.response?.status === 429) {
-        throw new DxtradeError(ERROR.RATE_LIMITED, "Rate limited (429). Too many requests — try again later.");
+        if (attempt === retries) {
+          throw new DxtradeError(ERROR.RATE_LIMITED, "Rate limited (429). Too many requests — try again later.");
+        }
+        await new Promise((res) => setTimeout(res, 3000 * attempt));
+        continue;
       }
+
       if (attempt === retries) throw error;
       await new Promise((res) => setTimeout(res, 1000 * attempt));
     }

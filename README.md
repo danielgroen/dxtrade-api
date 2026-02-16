@@ -114,7 +114,7 @@ BROKER.FTMO         // "https://dxtrade.ftmo.com"
 ### Positions
 
 - `client.positions.get()` — Get all open positions with P&L metrics merged (margin, plOpen, marketValue, etc.)
-- `client.positions.close(params)` — Close a position (supports partial closes via the quantity field)
+- `client.positions.close(positionCode, options?)` — Close a position by its position code. Returns `Position.Full` with P&L metrics. Options: `waitForClose: "stream" | "poll"`, `timeout` (ms, default 30000), `pollInterval` (ms, default 1000)
 - `client.positions.closeAll()` — Close all open positions with market orders
 - `client.positions.stream(callback)` — Stream real-time position updates with live P&L (requires `connect()`). Returns an unsubscribe function.
 
@@ -185,6 +185,7 @@ npm run example:debug
 npm run example:positions:get
 npm run example:positions:close
 npm run example:positions:close-all
+npm run example:positions:close-by-code
 npm run example:positions:metrics
 npm run example:positions:stream
 npm run example:orders:submit

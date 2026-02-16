@@ -1,5 +1,6 @@
 import { appendFileSync, writeFileSync } from "fs";
 import type WebSocket from "ws";
+import { DxtradeError, ERROR } from "@/constants";
 import type { WsPayload } from "./websocket.types";
 
 export type { WsPayload } from "./websocket.types";
@@ -29,6 +30,13 @@ export function parseAtmosphereId(data: WebSocket.Data): string | null {
     return parts[1];
   }
   return null;
+}
+
+/** Check if a WebSocket error is a 429 rate limit. If so, throw a RATE_LIMITED DxtradeError. */
+export function checkWsRateLimit(error: Error): void {
+  if (error.message.includes("429")) {
+    throw new DxtradeError(ERROR.RATE_LIMITED, "Rate limited (429). Too many requests — try again later.");
+  }
 }
 
 export function parseWsData(data: WebSocket.Data): WsPayload | string {

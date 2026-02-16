@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import { DxtradeError } from "@/constants/errors";
 import { WS_MESSAGE } from "@/constants/enums";
-import { getOrders, cancelOrder, cancelAllOrders } from "@/domains/order";
+import { OrdersDomain } from "@/domains/order";
 import { createMockContext } from "./helpers";
 
 // --- Mocks ---
@@ -34,9 +34,10 @@ beforeEach(() => {
 
 // --- Tests ---
 
-describe("getOrders", () => {
+describe("OrdersDomain.get", () => {
   it("should return orders from WebSocket ORDERS message", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
     const mockOrders = [
       {
         account: "ACC-123",
@@ -68,7 +69,7 @@ describe("getOrders", () => {
       },
     ];
 
-    const promise = getOrders(ctx);
+    const promise = orders.get();
 
     const payload = JSON.stringify({ accountId: "ACC-123", type: WS_MESSAGE.ORDERS, body: mockOrders });
     wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
@@ -80,8 +81,9 @@ describe("getOrders", () => {
 
   it("should ignore string WS messages", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
 
-    const promise = getOrders(ctx, 500);
+    const promise = orders.get(500);
 
     // First emit a string (atmosphere tracking id), then orders
     wsInstance.emit("message", Buffer.from("36|some-tracking-id|0||"));
@@ -96,8 +98,9 @@ describe("getOrders", () => {
 
   it("should reject on WS error", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
 
-    const promise = getOrders(ctx);
+    const promise = orders.get();
     wsInstance.emit("error", new Error("connection failed"));
 
     await expect(promise).rejects.toThrow(DxtradeError);
@@ -107,8 +110,9 @@ describe("getOrders", () => {
   it("should reject on timeout", async () => {
     vi.useFakeTimers();
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
 
-    const promise = getOrders(ctx, 1000);
+    const promise = orders.get(1000);
 
     vi.advanceTimersByTime(1001);
 
@@ -120,18 +124,20 @@ describe("getOrders", () => {
 
   it("should throw NO_SESSION when not authenticated", async () => {
     const ctx = createMockContext({ csrf: null });
+    const orders = new OrdersDomain(ctx);
 
-    await expect(getOrders(ctx)).rejects.toThrow(DxtradeError);
-    await expect(getOrders(ctx)).rejects.toThrow("No active session");
+    await expect(orders.get()).rejects.toThrow(DxtradeError);
+    await expect(orders.get()).rejects.toThrow("No active session");
   });
 });
 
-describe("cancelOrder", () => {
+describe("OrdersDomain.cancel", () => {
   it("should send DELETE request with correct URL", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
     mockRetryRequest.mockResolvedValue({ status: 200 });
 
-    await cancelOrder(ctx, 12345);
+    await orders.cancel(12345);
 
     expect(mockRetryRequest).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -148,30 +154,34 @@ describe("cancelOrder", () => {
       accountId: null,
       config: { username: "test", password: "test", broker: "FTMO" },
     });
+    const orders = new OrdersDomain(ctx);
 
-    await expect(cancelOrder(ctx, 12345)).rejects.toThrow("accountId is required to cancel an order");
+    await expect(orders.cancel(12345)).rejects.toThrow("accountId is required to cancel an order");
   });
 
   it("should throw CANCEL_ORDER_ERROR on request failure", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
     mockRetryRequest.mockRejectedValue(new Error("Network error"));
 
-    await expect(cancelOrder(ctx, 12345)).rejects.toThrow(DxtradeError);
-    await expect(cancelOrder(ctx, 12345)).rejects.toThrow("Cancel order error");
+    await expect(orders.cancel(12345)).rejects.toThrow(DxtradeError);
+    await expect(orders.cancel(12345)).rejects.toThrow("Cancel order error");
   });
 
   it("should rethrow DxtradeError as-is", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
     const original = new DxtradeError("CUSTOM", "custom error");
     mockRetryRequest.mockRejectedValue(original);
 
-    await expect(cancelOrder(ctx, 12345)).rejects.toBe(original);
+    await expect(orders.cancel(12345)).rejects.toBe(original);
   });
 });
 
-describe("cancelAllOrders", () => {
+describe("OrdersDomain.cancelAll", () => {
   it("should cancel only non-final orders", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
 
     const mockOrders = [
       { orderId: 1, finalStatus: false },
@@ -187,7 +197,7 @@ describe("cancelAllOrders", () => {
 
     mockRetryRequest.mockResolvedValue({ status: 200 });
 
-    await cancelAllOrders(ctx);
+    await orders.cancelAll();
 
     // Should have called cancelOrder for orders 1 and 3, not 2
     expect(mockRetryRequest).toHaveBeenCalledTimes(2);
@@ -197,6 +207,7 @@ describe("cancelAllOrders", () => {
 
   it("should do nothing when all orders are final", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
 
     const mockOrders = [{ orderId: 1, finalStatus: true }];
 
@@ -205,20 +216,21 @@ describe("cancelAllOrders", () => {
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
     }, 200);
 
-    await cancelAllOrders(ctx);
+    await orders.cancelAll();
 
     expect(mockRetryRequest).not.toHaveBeenCalled();
   });
 
   it("should do nothing when there are no orders", async () => {
     const ctx = createMockContext();
+    const orders = new OrdersDomain(ctx);
 
     setTimeout(() => {
       const payload = JSON.stringify({ accountId: null, type: WS_MESSAGE.ORDERS, body: [] });
       wsInstance.emit("message", Buffer.from(`${payload.length}|${payload}`));
     }, 200);
 
-    await cancelAllOrders(ctx);
+    await orders.cancelAll();
 
     expect(mockRetryRequest).not.toHaveBeenCalled();
   });

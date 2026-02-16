@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import WebSocket from "ws";
-import { parseWsData, shouldLog, debugLog } from "./websocket";
+import { parseWsData, shouldLog, debugLog, checkWsRateLimit } from "./websocket";
 import type { WsPayload } from "./websocket.types";
 
 export class WsManager extends EventEmitter {
@@ -27,10 +27,12 @@ export class WsManager extends EventEmitter {
       });
 
       ws.on("error", (error) => {
+        checkWsRateLimit(error);
+        const err = new Error(`WebSocket manager error: ${error.message}`);
         if (!this._ws) {
-          return reject(error);
+          return reject(err);
         }
-        this.emit("error", error);
+        this.emit("error", err);
       });
 
       ws.on("close", () => {

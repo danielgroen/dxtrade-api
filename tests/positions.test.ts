@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import { DxtradeError } from "@/constants/errors";
 import { WS_MESSAGE } from "@/constants/enums";
-import { getPositions, closeAllPositions } from "@/domains/position";
+import { PositionsDomain } from "@/domains/position";
 import { createMockContext } from "./helpers";
 
 // --- Mocks ---
@@ -77,11 +77,12 @@ function emitBothMessages() {
 
 // --- Tests ---
 
-describe("getPositions", () => {
+describe("PositionsDomain.get", () => {
   it("should return merged positions with metrics", async () => {
     const ctx = createMockContext();
+    const positions = new PositionsDomain(ctx);
 
-    const promise = getPositions(ctx);
+    const promise = positions.get();
     emitBothMessages();
 
     const result = await promise;
@@ -96,8 +97,9 @@ describe("getPositions", () => {
 
   it("should wait for both POSITIONS and POSITION_METRICS before resolving", async () => {
     const ctx = createMockContext();
+    const positions = new PositionsDomain(ctx);
 
-    const promise = getPositions(ctx);
+    const promise = positions.get();
 
     // Send only POSITIONS first — should NOT resolve yet
     const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: mockPositions });
@@ -117,8 +119,9 @@ describe("getPositions", () => {
 
   it("should reject on WS error", async () => {
     const ctx = createMockContext();
+    const positions = new PositionsDomain(ctx);
 
-    const promise = getPositions(ctx);
+    const promise = positions.get();
     wsInstance.emit("error", new Error("ws failed"));
 
     await expect(promise).rejects.toThrow(DxtradeError);
@@ -128,8 +131,9 @@ describe("getPositions", () => {
   it("should reject on timeout", async () => {
     vi.useFakeTimers();
     const ctx = createMockContext();
+    const positions = new PositionsDomain(ctx);
 
-    const promise = getPositions(ctx);
+    const promise = positions.get();
     vi.advanceTimersByTime(30_001);
 
     await expect(promise).rejects.toThrow(DxtradeError);
@@ -140,14 +144,16 @@ describe("getPositions", () => {
 
   it("should throw NO_SESSION when not authenticated", async () => {
     const ctx = createMockContext({ csrf: null });
+    const positions = new PositionsDomain(ctx);
 
-    await expect(getPositions(ctx)).rejects.toThrow("No active session");
+    await expect(positions.get()).rejects.toThrow("No active session");
   });
 });
 
-describe("closeAllPositions", () => {
+describe("PositionsDomain.closeAll", () => {
   it("should close each position with a market order", async () => {
     const ctx = createMockContext();
+    const positions = new PositionsDomain(ctx);
 
     const twoPositions = [
       ...mockPositions,
@@ -184,7 +190,7 @@ describe("closeAllPositions", () => {
 
     mockRetryRequest.mockResolvedValue({ status: 200 });
 
-    await closeAllPositions(ctx);
+    await positions.closeAll();
 
     expect(mockRetryRequest).toHaveBeenCalledTimes(2);
 
@@ -206,6 +212,7 @@ describe("closeAllPositions", () => {
 
   it("should do nothing when there are no positions", async () => {
     const ctx = createMockContext();
+    const positions = new PositionsDomain(ctx);
 
     setTimeout(() => {
       const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: [] });
@@ -215,7 +222,7 @@ describe("closeAllPositions", () => {
       wsInstance.emit("message", Buffer.from(`${metPayload.length}|${metPayload}`));
     }, 200);
 
-    await closeAllPositions(ctx);
+    await positions.closeAll();
 
     expect(mockRetryRequest).not.toHaveBeenCalled();
   });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import { WS_MESSAGE } from "@/constants/enums";
 import { DxtradeError } from "@/constants/errors";
-import { streamPositions, getPositions } from "@/domains/position";
+import { PositionsDomain } from "@/domains/position";
 import { createMockContext } from "./helpers";
 import type { WsManager } from "@/utils/ws-manager";
 
@@ -86,15 +86,16 @@ function createMockWsManager(initialCache?: Record<string, unknown>): WsManager 
 
 // --- Tests ---
 
-describe("streamPositions", () => {
+describe("PositionsDomain.stream", () => {
   it("should emit merged positions on POSITION_METRICS update", () => {
     const wsManager = createMockWsManager({
       [WS_MESSAGE.POSITIONS]: mockPositions,
     });
     const ctx = createMockContext({ wsManager });
+    const positions = new PositionsDomain(ctx);
 
     const callback = vi.fn();
-    streamPositions(ctx, callback);
+    positions.stream(callback);
 
     // Clear the initial cached emission
     callback.mockClear();
@@ -116,9 +117,10 @@ describe("streamPositions", () => {
       [WS_MESSAGE.POSITION_METRICS]: mockMetrics,
     });
     const ctx = createMockContext({ wsManager });
+    const positions = new PositionsDomain(ctx);
 
     const callback = vi.fn();
-    streamPositions(ctx, callback);
+    positions.stream(callback);
 
     expect(callback).toHaveBeenCalledTimes(1);
     const result = callback.mock.calls[0][0];
@@ -132,9 +134,10 @@ describe("streamPositions", () => {
       [WS_MESSAGE.POSITION_METRICS]: mockMetrics,
     });
     const ctx = createMockContext({ wsManager });
+    const positions = new PositionsDomain(ctx);
 
     const callback = vi.fn();
-    const unsubscribe = streamPositions(ctx, callback);
+    const unsubscribe = positions.stream(callback);
     callback.mockClear();
 
     (wsManager as unknown as EventEmitter).emit(WS_MESSAGE.POSITION_METRICS, mockMetrics);
@@ -148,13 +151,14 @@ describe("streamPositions", () => {
 
   it("should throw STREAM_REQUIRES_CONNECT when wsManager is null", () => {
     const ctx = createMockContext({ wsManager: null });
+    const positions = new PositionsDomain(ctx);
 
-    expect(() => streamPositions(ctx, vi.fn())).toThrow(DxtradeError);
-    expect(() => streamPositions(ctx, vi.fn())).toThrow("connect()");
+    expect(() => positions.stream(vi.fn())).toThrow(DxtradeError);
+    expect(() => positions.stream(vi.fn())).toThrow("connect()");
   });
 });
 
-describe("getPositions with wsManager", () => {
+describe("PositionsDomain.get with wsManager", () => {
   it("should use wsManager.waitFor and merge results", async () => {
     const wsManager = createMockWsManager({
       [WS_MESSAGE.POSITIONS]: mockPositions,
@@ -162,7 +166,8 @@ describe("getPositions with wsManager", () => {
     });
 
     const ctx = createMockContext({ wsManager });
-    const result = await getPositions(ctx);
+    const positions = new PositionsDomain(ctx);
+    const result = await positions.get();
 
     expect(result).toHaveLength(1);
     expect(result[0].uid).toBe("u1");
@@ -173,8 +178,9 @@ describe("getPositions with wsManager", () => {
 
   it("should fall back to WebSocket when wsManager is null", async () => {
     const ctx = createMockContext({ wsManager: null });
+    const positions = new PositionsDomain(ctx);
 
-    const promise = getPositions(ctx);
+    const promise = positions.get();
 
     const posPayload = JSON.stringify({ accountId: null, type: WS_MESSAGE.POSITIONS, body: mockPositions });
     wsInstance.emit("message", Buffer.from(`${posPayload.length}|${posPayload}`));
